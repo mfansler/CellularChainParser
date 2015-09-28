@@ -16,7 +16,7 @@ tokens = (
 t_PARTIAL    = r'\\partial'
 t_DELTA      = r'\\Delta'
 t_OTIMES      = r'\\otimes'
-t_IDENTIFIER = r'[a-zA-Z0-9]+(_{[a-zA-Z0-9]+})?'
+t_IDENTIFIER = r'[a-zA-Z0-9]+(_{[^}]+})?(\^{[^}]+})?'
 t_PLUS       = r'\+'
 t_EQUALS     = r'='
 t_LBRACE     = r'\\{'
@@ -26,7 +26,7 @@ t_RPAREN     = r'\)'
 t_COMMA      = r','
 
 # Ignored characters
-t_ignore = " \t"
+t_ignore = " \t&"
 
 def t_GROUP(t):
     r'C_{([0-9]+)}\([a-zA-Z0-9]*\)'

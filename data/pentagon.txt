@@ -22,4 +22,5 @@ C_{2}(X) = \{ P \}
 \Delta e_{4} = v_{1} \otimes e_{4} + e_{4} \otimes v_{4}
 \Delta e_{5} = v_{4} \otimes e_{5} + e_{5} \otimes v_{5}
 
-\Delta P = v_{1} \otimes P + P \otimes v_{5} + e_{1} \otimes ( e_{2} + e_{3} ) + e_{2} \otimes e_{3} + e_{4} \otimes e_{5}
+\Delta P = v_{1} \otimes P + P \otimes v_{5} + e_{1} \otimes ( e_{2} + e_{3} )
+           &+ e_{2} \otimes e_{3} + e_{4} \otimes e_{5}
