@@ -1,0 +1,25 @@
+C_{0}(X) = \{ v_{1}, v_{2}, v_{3}, v_{4}, v_{5} \}
+C_{1}(X) = \{ e_{1}, e_{2}, e_{3}, e_{4}, e_{5} \}
+C_{2}(X) = \{ P \}
+
+\partial P = e_{1} + e_{2} + e_{3} + e_{4} + e_{5}
+
+\partial e_{1} = v_{1} + v_{2}
+\partial e_{2} = v_{2} + v_{3}
+\partial e_{3} = v_{3} + v_{5}
+\partial e_{4} = v_{1} + v_{4}
+\partial e_{5} = v_{4} + v_{5}
+
+\Delta v_{1} = v_{1} \otimes v_{1}
+\Delta v_{2} = v_{2} \otimes v_{2}
+\Delta v_{3} = v_{3} \otimes v_{3}
+\Delta v_{4} = v_{4} \otimes v_{4}
+\Delta v_{5} = v_{5} \otimes v_{5}
+
+\Delta e_{1} = v_{1} \otimes e_{1} + e_{1} \otimes v_{2}
+\Delta e_{2} = v_{2} \otimes e_{2} + e_{2} \otimes v_{3}
+\Delta e_{3} = v_{3} \otimes e_{3} + e_{3} \otimes v_{5}
+\Delta e_{4} = v_{1} \otimes e_{4} + e_{4} \otimes v_{4}
+\Delta e_{5} = v_{4} \otimes e_{5} + e_{5} \otimes v_{5}
+
+\Delta P = v_{1} \otimes P + P \otimes v_{5} + e_{1} \otimes ( e_{2} + e_{3} ) + e_{2} \otimes e_{3} + e_{4} \otimes e_{5}

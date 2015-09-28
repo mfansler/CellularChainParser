@@ -1,0 +1,48 @@
+C_{0}(Mickey) = \{ 1, 2, 3, 4, 5, 6, 7, 8 \}
+C_{1}(Mickey) = \{ a, b, c, d, e, f, g, h, i, j, k, l \}
+C_{2}(Mickey) = \{ w, x, y, z \}
+
+\partial w = h + i + j
+\partial x = g + h + k
+\partial y = g + i + l
+\partial z = j + k + l
+
+\partial a = 1 + 5
+\partial b = 5 + 6
+\partial c = 1 + 6
+\partial d = 1 + 7
+\partial e = 7 + 8
+\partial f = 1 + 8
+\partial g = 1 + 4
+\partial h = 1 + 3
+\partial i = 1 + 2
+\partial j = 2 + 3
+\partial k = 3 + 4
+\partial l = 2 + 4
+
+\Delta 1 = 1 \otimes 1
+\Delta 2 = 2 \otimes 2
+\Delta 3 = 3 \otimes 3
+\Delta 4 = 4 \otimes 4
+\Delta 5 = 5 \otimes 5
+\Delta 6 = 6 \otimes 6
+\Delta 7 = 7 \otimes 7
+\Delta 8 = 8 \otimes 8
+
+\Delta a = 1 \otimes a + a \otimes 5
+\Delta b = 5 \otimes b + b \otimes 6
+\Delta c = 1 \otimes c + c \otimes 6
+\Delta d = 1 \otimes d + d \otimes 7
+\Delta e = 7 \otimes e + e \otimes 8
+\Delta f = 1 \otimes f + f \otimes 8
+\Delta g = 1 \otimes g + g \otimes 4
+\Delta h = 1 \otimes h + h \otimes 3
+\Delta i = 1 \otimes i + i \otimes 2
+\Delta j = 2 \otimes j + j \otimes 3
+\Delta k = 3 \otimes k + k \otimes 4
+\Delta l = 2 \otimes l + l \otimes 4
+
+\Delta w = 1 \otimes w + w \otimes 3 + i \otimes j
+\Delta x = 1 \otimes x + x \otimes 4 + h \otimes k
+\Delta y = 1 \otimes y + y \otimes 4 + i \otimes l
+\Delta z = 2 \otimes z + z \otimes 4 + j \otimes k

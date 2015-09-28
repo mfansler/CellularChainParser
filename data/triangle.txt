@@ -1,0 +1,19 @@
+C_{0}(X) = \{ v_{1}, v_{2}, v_{3} \}
+C_{1}(X) = \{ e_{1}, e_{2}, e_{3} \}
+C_{2}(X) = \{ T \}
+
+\partial e_{1} = v_{2} + v_{3}
+\partial e_{2} = v_{1} + v_{3}
+\partial e_{3} = v_{1} + v_{2}
+
+\partial T = e_{1} + e_{2} + e_{3}
+
+\Delta v_{1} = v_{1} \otimes v_{1}
+\Delta v_{2} = v_{2} \otimes v_{2}
+\Delta v_{3} = v_{3} \otimes v_{3}
+
+\Delta e_{1} = v_{2} \otimes e_{1} + e_{1} \otimes v_{3}
+\Delta e_{2} = v_{1} \otimes e_{2} + e_{2} \otimes v_{3}
+\Delta e_{3} = v_{1} \otimes e_{3} + e_{3} \otimes v_{2}
+
+\Delta T = v_{1} \otimes T + T \otimes v_{3} + e_{3} \otimes e_{1}

@@ -1,0 +1,12 @@
+% Author: Merv Fansler
+
+C_{0}(X) = \{ v \}
+C_{1}(X) = \{ e \}
+C_{2}(X) = \{ D \}
+
+%\partial e =
+\partial D = e
+
+\Delta v = v \otimes v
+\Delta e = v \otimes e + e \otimes v
+\Delta D = v \otimes D + D \otimes v + e \otimes e

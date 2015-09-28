@@ -1,0 +1,172 @@
+% =============================================================================
+% File        : borromean.txt
+% Authors     : Ronald Umble, Merv Fansler
+% Date        : 2015 09 23
+% Description : Cellular Decomposition of X = S^3 \ BR, where BR denotes an
+%               open tubular neighborhood of the Borromean rings embedded in
+%               the "lower" hemisphere of S^3.
+% =============================================================================
+
+% == CELLS ====================================================================
+
+C_{0}(X) = \{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 \}
+C_{1}(X) = \{ m_{1}, m_{2}, m_{3}, m_{4}, m_{5}, m_{6}, m_{7}, m_{8}, m_{9}, m_{10}, m_{11}, m_{12}, m_{13}, m_{14}, c_{1}, c_{2}, c_{3}, c_{4}, c_{5}, c_{6}, c_{7}, c_{8}, c_{9}, c_{10}, c_{11}, c_{12}, c_{13}, c_{14}, c_{15}, c_{16}, c_{17}, c_{18} \}
+C_{2}(X) = \{ a_{1}, a_{2}, a_{3}, a_{4}, e_{1}, e_{2}, s_{1}, s_{2}, s_{3}, s_{4}, s_{5}, s_{6}, s_{7}, s_{8}, s_{9}, s_{10}, s_{11}, s_{12}, t_{1}, t_{2}, t_{3}, t_{4}, t_{5}, t_{6}, t_{7}, t_{8}\}
+C_{3}(X) = \{ D, q_{1}, q_{2}, q_{3}, q_{4} \}
+
+% == BOUNDARY =================================================================
+
+\partial D = a_{1} + a_{2} + a_{3} + a_{4}
+\partial q_{1} = a_{1} + e_{1} + s_{3} + s_{7} + s_{9} + t_{1} + t_{5}
+\partial q_{2} = a_{2} + e_{2} + s_{4} + s_{8} + s_{10} + t_{3} + t_{7}
+\partial q_{3} = a_{3} + e_{1} + s_{1} + s_{5} + s_{11} + t_{2} + t_{6}
+\partial q_{4} = a_{4} + e_{2} + s_{2} + s_{6} + s_{12} + t_{4} + t_{8}
+
+\partial a_{1} = m_{14} + c_{17}
+\partial a_{2} = m_{14} + c_{18}
+\partial a_{3} = m_{1} + c_{17}
+\partial a_{4} = m_{1} + c_{18}
+
+\partial t_{1} = m_{10} + m_{11} + c_{1} + c_{3} + c_{4}
+\partial t_{2} = m_{4} + m_{5} + c_{1} + c_{3} + c_{4}
+\partial t_{3} = m_{10} + m_{11} + c_{7} + c_{8} + c_{11}
+\partial t_{4} = m_{4} + m_{5} + c_{7} + c_{8} + c_{11}
+\partial t_{5} = m_{8} + m_{9} + c_{2} + c_{5} + c_{6}
+\partial t_{6} = m_{6} + m_{7} + c_{2} + c_{5} + c_{6}
+\partial t_{7} = m_{8} + m_{9} + c_{9} + c_{10} + c_{12}
+\partial t_{8} = m_{6} + m_{7} + c_{9} + c_{10} + c_{12}
+
+\partial e_{1} = c_{1} + c_{2} + c_{13} + c_{15} + c_{17}
+\partial e_{2} = c_{11} + c_{12} + c_{14} + c_{16} + c_{18}
+
+\partial s_{1} = m_{1} + m_{2} + m_{3} + m_{4} + m_{6} + c_{3} + c_{5}
+\partial s_{2} = m_{1} + m_{2} + m_{3} + m_{4} + m_{6} + c_{7} + c_{9}
+\partial s_{3} = m_{9} + m_{12} + c_{5} + c_{15}
+\partial s_{4} = m_{9} + m_{12} + c_{9} + c_{16}
+\partial s_{5} = m_{3} + m_{7} + c_{6} + c_{13}
+\partial s_{6} = m_{3} + m_{7} + c_{10} + c_{14}
+\partial s_{7} = m_{10} + m_{12} + m_{13} + c_{4} + c_{6}
+\partial s_{8} = m_{10} + m_{12} + m_{13} + c_{8} + c_{10}
+\partial s_{9} = m_{8} + m_{11} + m_{13} + m_{14} + c_{3} + c_{13}
+\partial s_{10} = m_{8} + m_{11} + m_{13} + m_{14} + c_{7} + c_{14}
+\partial s_{11} = m_{2} + m_{5} + c_{4} + c_{15}
+\partial s_{12} = m_{2} + m_{5} + c_{8} + c_{16}
+
+\partial m_{1} = 1 + 11
+\partial m_{2} = 3 + 6
+\partial m_{3} = 8 + 11
+\partial m_{4} = 1 + 2
+\partial m_{5} = 4 + 5
+\partial m_{6} = 6 + 7
+\partial m_{7} = 9 + 10
+\partial m_{8} = 9 + 10
+\partial m_{9} = 6 + 7
+\partial m_{10} = 4 + 5
+\partial m_{11} = 1 + 2
+\partial m_{12} = 5 + 8
+\partial m_{13} = 3 + 9
+\partial m_{14} = 1 + 11
+
+\partial c_{1} = 1 + 5
+\partial c_{2} = 6 + 10
+\partial c_{3} = 2 + 3
+\partial c_{4} = 3 + 4
+\partial c_{5} = 7 + 8
+\partial c_{6} = 8 + 9
+\partial c_{7} = 2 + 3
+\partial c_{8} = 3 + 4
+\partial c_{9} = 7 + 8
+\partial c_{10} = 8 + 9
+\partial c_{11} = 1 + 5
+\partial c_{12} = 6 + 10
+\partial c_{13} = 10 + 11
+\partial c_{14} = 10 + 11
+\partial c_{15} = 5 + 6
+\partial c_{16} = 5 + 6
+\partial c_{17} = 1 + 11
+\partial c_{18} = 1 + 11
+
+% == COALGEBRA STRUCTURE ======================================================
+
+\Delta 1 = 1 \otimes 1
+\Delta 2 = 2 \otimes 2
+\Delta 3 = 3 \otimes 3
+\Delta 4 = 4 \otimes 4
+\Delta 5 = 5 \otimes 5
+\Delta 6 = 6 \otimes 6
+\Delta 7 = 7 \otimes 7
+\Delta 8 = 8 \otimes 8
+\Delta 9 = 9 \otimes 9
+\Delta 10 = 10 \otimes 10
+\Delta 11 = 11 \otimes 11
+
+\Delta c_{1} = 1 \otimes c_{1} + c_{1} \otimes 5
+\Delta c_{2} = 6 \otimes c_{2} + c_{2} \otimes 10
+\Delta c_{3} = 2 \otimes c_{3} + c_{3} \otimes 3
+\Delta c_{4} = 3 \otimes c_{4} + c_{4} \otimes 4
+\Delta c_{5} = 7 \otimes c_{5} + c_{5} \otimes 8
+\Delta c_{6} = 8 \otimes c_{6} + c_{6} \otimes 9
+\Delta c_{7} = 2 \otimes c_{7} + c_{7} \otimes 3
+\Delta c_{8} = 3 \otimes c_{8} + c_{8} \otimes 4
+\Delta c_{9} = 7 \otimes c_{9} + c_{9} \otimes 8
+\Delta c_{10} = 8 \otimes c_{10} + c_{10} \otimes 9
+\Delta c_{11} = 1 \otimes c_{11} + c_{11} \otimes 5
+\Delta c_{12} = 6 \otimes c_{12} + c_{12} \otimes 10
+\Delta c_{13} = 10 \otimes c_{13} + c_{13} \otimes 11
+\Delta c_{14} = 10 \otimes c_{14} + c_{14} \otimes 11
+\Delta c_{15} = 5 \otimes c_{15} + c_{15} \otimes 6
+\Delta c_{16} = 5 \otimes c_{16} + c_{16} \otimes 6
+\Delta c_{17} = 1 \otimes c_{17} + c_{17} \otimes 11
+\Delta c_{18} = 1 \otimes c_{18} + c_{18} \otimes 11
+
+\Delta m_{1} = 1 \otimes m_{1} + m_{1} \otimes 11
+\Delta m_{2} = 3 \otimes m_{2} + m_{2} \otimes 6
+\Delta m_{3} = 8 \otimes m_{3} + m_{3} \otimes 11
+\Delta m_{4} = 1 \otimes m_{4} + m_{4} \otimes 2
+\Delta m_{5} = 4 \otimes m_{5} + m_{5} \otimes 5
+\Delta m_{6} = 6 \otimes m_{6} + m_{6} \otimes 7
+\Delta m_{7} = 9 \otimes m_{7} + m_{7} \otimes 10
+\Delta m_{8} = 9 \otimes m_{8} + m_{8} \otimes 10
+\Delta m_{9} = 6 \otimes m_{9} + m_{9} \otimes 7
+\Delta m_{10} = 4 \otimes m_{10} + m_{10} \otimes 5
+\Delta m_{11} = 1 \otimes m_{11} + m_{11} \otimes 2
+\Delta m_{12} = 5 \otimes m_{12} + m_{12} \otimes 8
+\Delta m_{13} = 3 \otimes m_{13} + m_{13} \otimes 9
+\Delta m_{14} = 1 \otimes m_{14} + m_{14} \otimes 11
+
+\Delta a_{1} = 1 \otimes a_{1} + a_{1} \otimes 11
+\Delta a_{2} = 1 \otimes a_{2} + a_{2} \otimes 11
+\Delta a_{3} = 1 \otimes a_{3} + a_{3} \otimes 11
+\Delta a_{4} = 1 \otimes a_{4} + a_{4} \otimes 11
+
+\Delta e_{1} = 1 \otimes e_{1} + e_{1} \otimes 11 + c_{1} \otimes (c_{15} + c_{2} + c_{13}) + c_{15} \otimes (c_{2} + c_{13}) + c_{2} \otimes c_{13}
+\Delta e_{2} = 1 \otimes e_{2} + e_{2} \otimes 11 + c_{11} \otimes (c_{16} + c_{12} + c_{14}) + c_{16} \otimes (c_{12} + c_{14}) + c_{12} \otimes c_{14}
+
+\Delta s_{1} = 1 \otimes s_{1} + s_{1} \otimes 11 + m_{4} \otimes (c_{3} + m_{2} + m_{6} + c_{5} + m_{3}) + c_{3} \otimes (m_{2} + m_{6} + c_{5} + m_{3}) + m_{2} \otimes (m_{6} + c_{5} + m_{3}) + m_{6} \otimes (c_{5} + m_{3}) + c_{5} \otimes m_{3}
+\Delta s_{2} = 1 \otimes s_{2} + s_{2} \otimes 11 + m_{4} \otimes (c_{7} + m_{2} + m_{6} + c_{9} + m_{3}) + c_{7} \otimes (m_{2} + m_{6} + c_{9} + m_{3}) + m_{2} \otimes (m_{6} + c_{9} + m_{3}) + m_{6} \otimes (c_{9} + m_{3}) + c_{9} \otimes m_{3}
+\Delta s_{3} = 5 \otimes s_{3} + s_{3} \otimes 8 + c_{15} \otimes (m_{9} + c_{5}) + m_{9} \otimes c_{5}
+\Delta s_{4} = 5 \otimes s_{4} + s_{4} \otimes 8 + c_{16} \otimes (m_{9} + c_{9}) + m_{9} \otimes c_{9}
+\Delta s_{5} = 8 \otimes s_{5} + s_{5} \otimes 11 + c_{6} \otimes (m_{7} + c_{13}) + m_{7} \otimes c_{13}
+\Delta s_{6} = 8 \otimes s_{6} + s_{6} \otimes 11 + c_{10} \otimes (m_{7} + c_{14}) + m_{7} \otimes c_{14}
+\Delta s_{7} = 3 \otimes s_{7} + s_{7} \otimes 9 + c_{4} \otimes (m_{10} + m_{12} + c_{6}) + m_{10} \otimes (m_{12} + c_{6}) + m_{12} \otimes c_{6}
+\Delta s_{8} = 3 \otimes s_{8} + s_{8} \otimes 9 + c_{8} \otimes (m_{10} + m_{12} + c_{10}) + m_{10} \otimes (m_{12} + c_{10}) + m_{12} \otimes c_{10}
+\Delta s_{9} = 1 \otimes s_{9} + s_{9} \otimes 11 + m_{11} \otimes (c_{3} + m_{13} + m_{8} + c_{13}) + c_{3} \otimes (m_{13} + m_{8} + c_{13}) + m_{13} \otimes (m_{8} + c_{13}) + m_{8} \otimes c_{13}
+\Delta s_{10} = 1 \otimes s_{10} + s_{10} \otimes 11 + m_{11} \otimes (c_{7} + m_{13} + m_{8} + c_{14}) + c_{7} \otimes (m_{13} + m_{8} + c_{14}) + m_{13} \otimes (m_{8} + c_{14}) + m_{8} \otimes c_{14}
+\Delta s_{11} = 3 \otimes s_{11} + s_{11} \otimes 6 + c_{4} \otimes (m_{5} + c_{15}) + m_{5} \otimes c_{15}
+\Delta s_{12} = 3 \otimes s_{12} + s_{12} \otimes 6 + c_{8} \otimes (m_{5} + c_{16}) + m_{5} \otimes c_{16}
+
+\Delta t_{1} = 1 \otimes t_{1} + t_{1} \otimes 5 + m_{11} \otimes (c_{3} + c_{4} + m_{10}) + c_{3} \otimes (c_{4} + m_{10}) + c_{4} \otimes m_{10}
+\Delta t_{2} = 1 \otimes t_{2} + t_{2} \otimes 5 + m_{4} \otimes (c_{3} + c_{4} + m_{5}) + c_{3} \otimes (c_{4} + m_{5}) + c_{4} \otimes m_{5}
+\Delta t_{3} = 1 \otimes t_{3} + t_{3} \otimes 5 + m_{11} \otimes (c_{7} + c_{8} + m_{10}) + c_{7} \otimes (c_{8} + m_{10}) + c_{8} \otimes m_{10}
+\Delta t_{4} = 1 \otimes t_{4} + t_{4} \otimes 5 + m_{4} \otimes (c_{7} + c_{8} + m_{5}) + c_{7} \otimes (c_{8} + m_{5}) + c_{8} \otimes m_{5}
+\Delta t_{5} = 6 \otimes t_{5} + t_{5} \otimes 10 + m_{9} \otimes (c_{5} + c_{6} + m_{8}) + c_{5} \otimes (c_{6} + m_{8}) + c_{6} \otimes m_{8}
+\Delta t_{6} = 6 \otimes t_{6} + t_{6} \otimes 10 + m_{6} \otimes (c_{5} + c_{6} + m_{7}) + c_{5} \otimes (c_{6} + m_{7}) + c_{6} \otimes m_{7}
+\Delta t_{7} = 6 \otimes t_{7} + t_{7} \otimes 10 + m_{9} \otimes (c_{9} + c_{10} + m_{8}) + c_{9} \otimes (c_{10} + m_{8}) + c_{10} \otimes m_{8}
+\Delta t_{8} = 6 \otimes t_{8} + t_{8} \otimes 10 + m_{6} \otimes (c_{9} + c_{10} + m_{7}) + c_{9} \otimes (c_{10} + m_{7}) + c_{10} \otimes m_{7}
+
+\Delta q_{1} = 1 \otimes q_{1} + q_{1} \otimes 11 + t_{1} \otimes (m_{12} + c_{6} + m_{8} + c_{13}) + c_{1} \otimes t_{5} + c_{15} \otimes t_{5} + t_{5} \otimes c_{13} + c_{1} \otimes s_{3} + s_{3} \otimes (c_{6} + m_{8} + c_{13}) + m_{11} \otimes s_{7} + c_{3} \otimes s_{7} + s_{7} \otimes (m_{8} + c_{13})
+\Delta q_{2} = 1 \otimes q_{2} + q_{2} \otimes 11 + t_{3} \otimes (m_{12} + c_{10} + m_{8} + c_{14}) + c_{11} \otimes t_{7} + c_{16} \otimes t_{7} + t_{7} \otimes c_{14} + c_{11} \otimes s_{4} + s_{4} \otimes (c_{10} + m_{8} + c_{14}) + m_{11} \otimes s_{8} + c_{7} \otimes s_{8} + s_{8} \otimes (m_{8} + c_{14})
+\Delta q_{3} = 1 \otimes q_{3} + q_{3} \otimes 11 + t_{2} \otimes (m_{6} + c_{5} + m_{3} + c_{15}) + c_{1} \otimes t_{6} + c_{15} \otimes t_{6} + t_{6} \otimes c_{13} + m_{4} \otimes s_{11} + c_{3} \otimes s_{11} + s_{11} \otimes (m_{6} + c_{5} + m_{3}) + c_{1} \otimes s_{5} + c_{15} \otimes s_{5} + m_{6} \otimes s_{5} + c_{5} \otimes s_{5}
+\Delta q_{4} = 1 \otimes q_{4} + q_{4} \otimes 11 + t_{4} \otimes (m_{6} + c_{9} + m_{3} + c_{16}) + c_{11} \otimes t_{8} + c_{16} \otimes t_{8} + t_{8} \otimes c_{14} + m_{4} \otimes s_{12} + c_{7} \otimes s_{12} + s_{12} \otimes (m_{6} + c_{9} + m_{3}) + c_{11} \otimes s_{6} + c_{16} \otimes s_{6} + m_{6} \otimes s_{6} + c_{9} \otimes s_{6}
+
+\Delta D = 1 \otimes D + D \otimes 11
