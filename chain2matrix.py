@@ -1,8 +1,13 @@
 __author__ = 'mfansler'
 
 import sys
-
+from re import sub
 import CellChainParse
+
+
+def format_cells(cells):
+    return sub(r'[{}]', '', str(cells))
+
 
 # Check if input file is specified
 if len(sys.argv) == 2:
@@ -39,5 +44,15 @@ if len(sys.argv) == 2:
             n, len(result["groups"][n-1]), len(result["groups"][n]), entries
         )
 
-    print result["coproducts"]
+    #print "var({})".format(", ".join(["'" + format_cells(cell) + "'" for group in result["groups"].values() for cell in group]))
+
+    first = True
+    print "{ ",
+    for n, cells in result["groups"].items():
+        if not first:
+            print ", ",
+        else:
+            first = False
+        print "{}: matrix(SR, {})".format(topDimension - n, format_cells(cells)),
+    print "}"
 
