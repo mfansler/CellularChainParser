@@ -44,7 +44,7 @@ if len(sys.argv) == 2:
             n, len(result["groups"][n-1]), len(result["groups"][n]), entries
         )
 
-    #print "var({})".format(", ".join(["'" + format_cells(cell) + "'" for group in result["groups"].values() for cell in group]))
+    print "var({})".format(", ".join(["'" + format_cells(cell) + "'" for group in result["groups"].values() for cell in group]))
 
     first = True
     print "{ ",
