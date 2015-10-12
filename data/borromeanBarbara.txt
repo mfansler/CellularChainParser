@@ -54,13 +54,13 @@ C_{3}(X) = \{ D, Q_{1}, Q_{2}, Q_{3}, Q_{4} \}
 \partial e_{1} = a_{2,8} + a_{8,9} + c_{9,10} + a_{0,10} + a_{0,1} + c_{1,2}
 \partial e_{2} = a_{4,7} + c_{7,8} + a_{2,8} + c_{2,3} + a_{3,4}
 \partial e_{3} = a_{5,6} + c_{6,7} + a_{4,7} + c_{4,5} 
-\partial f_{1} = b_{2,5} + c_{5,6} + b_{6,7} + b_{7,10} + b_{0,10} + b_{0,1} + c_{1,2}
+\partial f_{1} = b_{2,5} + b_{5,6} + c_{6,7} + b_{7,10} + b_{0,10} + b_{0,1} + c_{1,2}
 \partial f_{2} = b_{3,4} + c_{4,5} + b_{2,5} + c_{2,3}
 \partial f_{3} = b_{8,9} + c_{9,10} + b_{7,10} + c_{7,8} 
 \partial g_{1} = a_{2,8} + a_{8,9} + d_{9,10} + a_{0,10} + a_{0,1} + d_{1,2}
 \partial g_{2} = a_{4,7} + d_{7,8} + a_{2,8} + d_{2,3} + a_{3,4}
 \partial g_{3} = a_{5,6} + d_{6,7} + a_{4,7} + d_{4,5} 
-\partial h_{1} = b_{2,5} + d_{5,6} + b_{6,7} + b_{7,10} + b_{0,10} + b_{0,1} + d_{1,2}
+\partial h_{1} = b_{2,5} + b_{5,6} + d_{6,7} + b_{7,10} + b_{0,10} + b_{0,1} + d_{1,2}
 \partial h_{2} = b_{3,4} + d_{4,5} + b_{2,5} + d_{2,3}
 \partial h_{3} = b_{8,9} + d_{9,10} + b_{7,10} + d_{7,8} 
 
@@ -176,9 +176,9 @@ C_{3}(X) = \{ D, Q_{1}, Q_{2}, Q_{3}, Q_{4} \}
 \Delta u_{0} = 0 \otimes u_{0} + u_{0} \otimes 4 + b_{0,1} \otimes (d_{1,2} + d_{2,3} + b_{3,4}) + d_{1,2} \otimes ( d_{2,3} + b_{3,4}) + d_{2,3} \otimes b_{3,4}
 \Delta u_{5} = 5 \otimes u_{5} + u_{5} \otimes 9 + b_{5,6} \otimes (d_{6,7} + d_{7,8} + b_{8,9}) + d_{6,7} \otimes ( d_{7,8} + b_{8,9}) + d_{7,8} \otimes b_{8,9}
 
-\Delta Q_{1} = 0 \otimes Q_{1} + Q_{1} \otimes 10 + r_{0} \otimes (a_{4,7} + c_{7,8} + a_{8,9} + c_{9,10}) + r_{5} \otimes c_{9,10} + (c_{0,4} + c_{4,5}) \otimes r_{5} + e_{2} \otimes (a_{8,9} + c_{9,10}) + (a_{0,1} + c_{1,2}) \otimes e_{2} + e_{3} \otimes (c_{7,8} + a_{8,9} + c_{9,10}) + c_{0,4} \otimes e_{3}
-\Delta Q_{2} = 0 \otimes Q_{2} + Q_{2} \otimes 10 + s_{0} \otimes (c_{4,5} + b_{5,6} + c_{6,7} + b_{7,10}) + s_{5} \otimes c_{9,10} + (c_{0,4} + c_{4,5}) \otimes s_{5} + f_{2} \otimes (b_{5,6} + c_{6,7} + b_{7,10}) + (b_{0,1} + c_{1,2}) \otimes f_{2} + (c_{0,4} + c_{4,5} + b_{5,6} + c_{6,7}) \otimes f_{3}
-\Delta Q_{3} = 0 \otimes Q_{3} + Q_{3} \otimes 10 + t_{0} \otimes (a_{4,7} + d_{7,8} + a_{8,9} + d_{9,10}) + t_{5} \otimes d_{9,10} + (d_{0,4} + d_{4,5}) \otimes t_{5} + g_{2} \otimes (a_{8,9} + d_{9,10}) + (a_{0,1} + d_{1,2}) \otimes g_{2} + g_{3} \otimes (d_{7,8} + a_{8,9} + d_{9,10}) + d_{0,4} \otimes g_{3}
-\Delta Q_{4} = 0 \otimes Q_{4} + Q_{4} \otimes 10 + u_{0} \otimes (d_{4,5} + b_{5,6} + d_{6,7} + b_{7,10}) + u_{5} \otimes d_{9,10} + (d_{0,4} + d_{4,5}) \otimes u_{5} + h_{2} \otimes (b_{5,6} + d_{6,7} + b_{7,10}) + (b_{0,1} + d_{1,2}) \otimes h_{2} + (d_{0,4} + d_{4,5} + b_{5,6} + d_{6,7}) \otimes h_{3}
+\Delta Q_{1} = 0 \otimes Q_{1} + Q_{1} \otimes 10 + r_{0} \otimes (a_{4,7} + c_{7,8} + a_{8,9} + c_{9,10}) + r_{5} \otimes c_{9,10} + c_{0,4} \otimes r_{5} + c_{4,5} \otimes r_{5} + e_{2} \otimes (a_{8,9} + c_{9,10}) + a_{0,1} \otimes e_{2} + c_{1,2} \otimes e_{2} + e_{3} \otimes (c_{7,8} + a_{8,9} + c_{9,10}) + c_{0,4} \otimes e_{3}
+\Delta Q_{2} = 0 \otimes Q_{2} + Q_{2} \otimes 10 + s_{0} \otimes (c_{4,5} + b_{5,6} + c_{6,7} + b_{7,10}) + s_{5} \otimes c_{9,10} + c_{0,4} \otimes s_{5} + c_{4,5} \otimes s_{5} + f_{2} \otimes (b_{5,6} + c_{6,7} + b_{7,10}) + b_{0,1} \otimes f_{2} + c_{1,2} \otimes f_{2} + c_{0,4} \otimes f_{3} + c_{4,5} \otimes f_{3} + b_{5,6} \otimes f_{3} + c_{6,7} \otimes f_{3}
+\Delta Q_{3} = 0 \otimes Q_{3} + Q_{3} \otimes 10 + t_{0} \otimes (a_{4,7} + d_{7,8} + a_{8,9} + d_{9,10}) + t_{5} \otimes d_{9,10} + d_{0,4} \otimes t_{5} + d_{4,5} \otimes t_{5} + g_{2} \otimes (a_{8,9} + d_{9,10}) + a_{0,1} \otimes g_{2} + d_{1,2} \otimes g_{2} + g_{3} \otimes (d_{7,8} + a_{8,9} + d_{9,10}) + d_{0,4} \otimes g_{3}
+\Delta Q_{4} = 0 \otimes Q_{4} + Q_{4} \otimes 10 + u_{0} \otimes (d_{4,5} + b_{5,6} + d_{6,7} + b_{7,10}) + u_{5} \otimes d_{9,10} + d_{0,4} \otimes u_{5} + d_{4,5} \otimes u_{5} + h_{2} \otimes (b_{5,6} + d_{6,7} + b_{7,10}) + b_{0,1} \otimes h_{2} + d_{1,2} \otimes h_{2} + d_{0,4} \otimes h_{3} + d_{4,5} \otimes h_{3} + b_{5,6} \otimes h_{3} + d_{6,7} \otimes h_{3}
 
 \Delta D = 0 \otimes D + D \otimes 10
