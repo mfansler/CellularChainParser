@@ -102,7 +102,7 @@ def p_expression_identifier(p):
 
 def p_error(p):
     if p:
-        print "Syntax error at '%s'" % p.value
+        print "Syntax error at '%s' on line %d" % (p.value, p.lineno)
     else:
         print "Syntax error at EOF"
 

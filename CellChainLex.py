@@ -42,7 +42,7 @@ def t_comment(t):
     r'%.*'
 
 def t_error(t):
-    print "Illegal character '%s'" % t.value[0]
+    print "Illegal character '%s' on line %d" % (t.value[0], t.lexer.lineno)
     t.lexer.skip(1)
 
 # Build the lexer
