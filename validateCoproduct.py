@@ -53,38 +53,42 @@ if len(sys.argv) == 2:
                 i = result["groups"][n-1].index(edge)
                 differential[n][(i, j)] = count
 
-    # TODO: check all dimensions
-    for i in result["groups"][topDimension]:
+    allValid = True;
+    for n in range(1, topDimension+1):
+        for i in result["groups"][n]:
 
-        # Compute and print \Delta \partial (X)
-        boundary = result["differentials"][i]
-        lhs = DELTA + PARTIAL + str(i)
-        print u"{} = {} ({})".format(lhs,  DELTA, formatSum(boundary))
+            # Compute and print \Delta \partial (X)
+            boundary = result["differentials"][i]
+            lhs = DELTA + PARTIAL + str(i)
+            print u"{} = {} ({})".format(lhs,  DELTA, formatSum(boundary))
 
-        boundary_coproducts = Counter()
-        for k, v in boundary.items():
-            boundary_coproducts += Counter({l: w * v for l, w in result["coproducts"][k].items()})
-        boundary_coproducts = reduceModN(boundary_coproducts)
-        print " " * len(lhs) + " = " + formatSum(boundary_coproducts) + "\n"
+            boundary_coproducts = Counter()
+            for k, v in boundary.items():
+                boundary_coproducts += Counter({l: w * v for l, w in result["coproducts"][k].items()})
+            boundary_coproducts = reduceModN(boundary_coproducts)
+            print " " * len(lhs) + " = " + formatSum(boundary_coproducts) + "\n"
 
-        # Compute and print (1 \otimes \partial + \partial \otimes 1) \Delta (X)
+            # Compute and print (1 \otimes \partial + \partial \otimes 1) \Delta (X)
 
-        coproduct = result["coproducts"][i]
-        lhs = CHAINPARTIAL + DELTA + str(i)
-        print u"{} = {} ({})".format(lhs, CHAINPARTIAL, formatSum(coproduct))
+            coproduct = result["coproducts"][i]
+            lhs = CHAINPARTIAL + DELTA + str(i)
+            print u"{} = {} ({})".format(lhs, CHAINPARTIAL, formatSum(coproduct))
 
-        fullDifferential = Counter()
-        for (l, r), v in coproduct.items():
-            if l in result["differentials"].keys():
-                fullDifferential += Counter({(l_diff, r): v*w for l_diff, w in result["differentials"][l].items()})
-            if r in result["differentials"].keys():
-                fullDifferential += Counter({(l, r_diff): v*w for r_diff, w in result["differentials"][r].items()})
-        fullDifferential = reduceModN(fullDifferential)
+            fullDifferential = Counter()
+            for (l, r), v in coproduct.items():
+                if l in result["differentials"].keys():
+                    fullDifferential += Counter({(l_diff, r): v*w for l_diff, w in result["differentials"][l].items()})
+                if r in result["differentials"].keys():
+                    fullDifferential += Counter({(l, r_diff): v*w for r_diff, w in result["differentials"][r].items()})
+            fullDifferential = reduceModN(fullDifferential)
 
-        print u"{} = {}".format(" "*len(lhs), formatSum(fullDifferential)) + "\n"
+            print u"{} = {}".format(" "*len(lhs), formatSum(fullDifferential)) + "\n"
 
-        # Compare two results
-        if fullDifferential == boundary_coproducts:
-            print "Diagonal Valid!: " + DELTA + PARTIAL + str(i) + " == " + CHAINPARTIAL + DELTA + str(i)
-        else:
-            print "Diagonal Invalid!: " + DELTA + PARTIAL + str(i) + " != " + CHAINPARTIAL + DELTA + str(i)
+            # Compare two results
+            if fullDifferential == boundary_coproducts:
+                print "Diagonal Valid!: " + DELTA + PARTIAL + str(i) + " == " + CHAINPARTIAL + DELTA + str(i)
+            else:
+                allValid = False
+                print "Diagonal Invalid!: " + DELTA + PARTIAL + str(i) + " != " + CHAINPARTIAL + DELTA + str(i)
+
+    print "All Diagonals Valid!" if allValid else "Invalid Diagonal Detected!"
