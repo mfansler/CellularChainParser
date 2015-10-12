@@ -6,7 +6,7 @@ import CellChainParse
 
 
 def format_cells(cells):
-    return sub(r'[{}]', '', str(cells))
+    return sub(',', '_', sub(r'[{}]', '', str(cells)))
 
 
 # Check if input file is specified
@@ -48,11 +48,12 @@ if len(sys.argv) == 2:
 
     first = True
     print "{ ",
-    for n, cells in result["groups"].items():
+    for n, group in result["groups"].items():
         if not first:
             print ", ",
         else:
             first = False
-        print "{}: matrix(SR, {})".format(topDimension - n, format_cells(cells)),
+        print "{}: matrix(SR, [{}])".format(topDimension - n, ", ".join(
+            ["'" + format_cells(cell) + "'" for cell in group])),
     print "}"
 
