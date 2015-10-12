@@ -1,0 +1,184 @@
+% =============================================================================
+% File        : borromean.txt
+% Authors     : Ronald Umble, Merv Fansler  --> with changes by Barbara Nimershiem
+% Date        : 2015 09 23  --> 2015 10 11
+% Description : Cellular Decomposition of X = S^3 \ BR, where BR denotes an
+%               open tubular neighborhood of the Borromean rings embedded in
+%               the "lower" hemisphere of S^3.
+% =============================================================================
+
+% == Barbara's CELLS ====================================================================
+
+C_{0}(X) = \{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 \}
+C_{1}(X) = \{ 	a_{0,1}, a_{0,10}, a_{2,8}, a_{3,4}, a_{4,7}, a_{5,6}, a_{8,9}, 
+		b_{0,1}, b_{0,10}, b_{2,5}, b_{3,4}, b_{5,6}, b_{7,10}, b_{8,9}, 
+		c_{0,4}, c_{0,10}, c_{1,2}, c_{2,3}, c_{4,5}, c_{5,9}, c_{6,7}, c_{7,8}, c_{9,10}, 
+		d_{0,4}, d_{0,10}, d_{1,2}, d_{2,3}, d_{4,5}, d_{5,9}, d_{6,7}, d_{7,8}, d_{9,10} \}
+C_{2}(X) = \{ 	e_{0}, e_{1}, e_{2}, e_{3}, 
+		f_{0}, f_{1}, f_{2}, f_{3}, 
+		g_{0}, g_{1}, g_{2}, g_{3}, 
+		h_{0}, h_{1}, h_{2}, h_{3},
+		j_{1}, j_{2},
+		r_{0}, r_{5},
+		s_{0}, s_{5},
+		t_{0}, t_{5},
+		u_{0}, u_{5} \}
+C_{3}(X) = \{ D, Q_{1}, Q_{2}, Q_{3}, Q_{4} \}
+
+% == Barbara's BOUNDARY =================================================================
+
+\partial D = e_{0} + f_{0} + g_{0} + h_{0}
+
+\partial Q_{1} = j_{1} + e_{0} + e_{1} + e_{2} + e_{3} + r_{0} + r_{5}
+\partial Q_{2} = j_{1} + f_{0} + f_{1} + f_{2} + f_{3} + s_{0} + s_{5}
+\partial Q_{3} = j_{2} + g_{0} + g_{1} + g_{2} + g_{3} + t_{0} + t_{5}
+\partial Q_{4} = j_{2} + h_{0} + h_{1} + h_{2} + h_{3} + u_{0} + u_{5}
+
+\partial r_{0} = c_{0,4} + a_{0,1} + c_{1,2} + c_{2,3} + a_{3,4}
+\partial r_{5} = c_{5,9} + a_{5,6} + c_{6,7} + c_{7,8} + a_{8,9}
+\partial s_{0} = c_{0,4} + b_{0,1} + c_{1,2} + c_{2,3} + b_{3,4}
+\partial s_{5} = c_{5,9} + b_{5,6} + c_{6,7} + c_{7,8} + b_{8,9}
+\partial t_{0} = d_{0,4} + a_{0,1} + d_{1,2} + d_{2,3} + a_{3,4}
+\partial t_{5} = d_{5,9} + a_{5,6} + d_{6,7} + d_{7,8} + a_{8,9}
+\partial u_{0} = d_{0,4} + b_{0,1} + d_{1,2} + d_{2,3} + b_{3,4}
+\partial u_{5} = d_{5,9} + b_{5,6} + d_{6,7} + d_{7,8} + b_{8,9}
+
+\partial j_{1} = c_{0,10} + c_{0,4} + c_{4,5} + c_{5,9} + c_{9,10}
+\partial j_{2} = d_{0,10} + d_{0,4} + d_{4,5} + d_{5,9} + d_{9,10}
+
+\partial e_{0} = a_{0,10} + c_{0,10}
+\partial f_{0} = b_{0,10} + c_{0,10}
+\partial g_{0} = a_{0,10} + d_{0,10}
+\partial h_{0} = b_{0,10} + d_{0,10}
+
+\partial e_{1} = a_{2,8} + a_{8,9} + c_{9,10} + a_{0,10} + a_{0,1} + c_{1,2}
+\partial e_{2} = a_{4,7} + c_{7,8} + a_{2,8} + c_{2,3} + a_{3,4}
+\partial e_{3} = a_{5,6} + c_{6,7} + a_{4,7} + c_{4,5} 
+\partial f_{1} = b_{2,5} + c_{5,6} + b_{6,7} + b_{7,10} + b_{0,10} + b_{0,1} + c_{1,2}
+\partial f_{2} = b_{3,4} + c_{4,5} + b_{2,5} + c_{2,3}
+\partial f_{3} = b_{8,9} + c_{9,10} + b_{7,10} + c_{7,8} 
+\partial g_{1} = a_{2,8} + a_{8,9} + d_{9,10} + a_{0,10} + a_{0,1} + d_{1,2}
+\partial g_{2} = a_{4,7} + d_{7,8} + a_{2,8} + d_{2,3} + a_{3,4}
+\partial g_{3} = a_{5,6} + d_{6,7} + a_{4,7} + d_{4,5} 
+\partial h_{1} = b_{2,5} + d_{5,6} + b_{6,7} + b_{7,10} + b_{0,10} + b_{0,1} + d_{1,2}
+\partial h_{2} = b_{3,4} + d_{4,5} + b_{2,5} + d_{2,3}
+\partial h_{3} = b_{8,9} + d_{9,10} + b_{7,10} + d_{7,8} 
+
+\partial a_{0,1} = 0 + 1
+\partial a_{0,10} = 0 + 10
+\partial a_{2,8} = 2 + 8
+\partial a_{3,4} = 3 + 4
+\partial a_{4,7} = 4 + 7
+\partial a_{5,6} = 5 + 6
+\partial a_{8,9} = 8 + 9
+\partial b_{0,1} = 0 + 1
+\partial b_{0,10} = 0 + 10
+\partial b_{2,5} = 2 + 5
+\partial b_{3,4} = 3 + 4
+\partial b_{5,6} = 5 + 6
+\partial b_{7,10} = 7 + 10
+\partial b_{8,9} = 8 + 9
+
+\partial c_{0,4} = 0 + 4
+\partial c_{0,10} = 0 + 10
+\partial c_{1,2} = 1 + 2
+\partial c_{2,3} = 2 + 3
+\partial c_{4,5} = 4 + 5
+\partial c_{5,9} = 5 + 9
+\partial c_{6,7} = 6 + 7
+\partial c_{7,8} = 7 + 8
+\partial c_{9,10} = 9 + 10
+\partial d_{0,4} = 0 + 4
+\partial d_{0,10} = 0 + 10
+\partial d_{1,2} = 1 + 2
+\partial d_{2,3} = 2 + 3
+\partial d_{4,5} = 4 + 5
+\partial d_{5,9} = 5 + 9
+\partial d_{6,7} = 6 + 7
+\partial d_{7,8} = 7 + 8
+\partial d_{9,10} = 9 + 10
+
+% == Barbara's ALTERNATIVE COALGEBRA STRUCTURE ======================================================
+
+\Delta 0 = 0 \otimes 0
+\Delta 1 = 1 \otimes 1
+\Delta 2 = 2 \otimes 2
+\Delta 3 = 3 \otimes 3
+\Delta 4 = 4 \otimes 4
+\Delta 5 = 5 \otimes 5
+\Delta 6 = 6 \otimes 6
+\Delta 7 = 7 \otimes 7
+\Delta 8 = 8 \otimes 8
+\Delta 9 = 9 \otimes 9
+\Delta 10 = 10 \otimes 10
+
+\Delta a_{0,1} = 0 \otimes a_{0,1} + a_{0,1} \otimes 1
+\Delta a_{0,10} = 0 \otimes a_{0,10} + a_{0,10} \otimes 10
+\Delta a_{2,8} = 2 \otimes a_{2,8} + a_{2,8} \otimes 8
+\Delta a_{3,4} = 3 \otimes a_{3,4} + a_{3,4} \otimes 4
+\Delta a_{4,7} = 4 \otimes a_{4,7} + a_{4,7} \otimes 7
+\Delta a_{5,6} = 5 \otimes a_{5,6} + a_{5,6} \otimes 6
+\Delta a_{8,9} = 8 \otimes a_{8,9} + a_{8,9} \otimes 9
+\Delta b_{0,1} = 0 \otimes b_{0,1} + b_{0,1} \otimes 1
+\Delta b_{0,10} = 0 \otimes b_{0,10} + b_{0,10} \otimes 10
+\Delta b_{2,5} = 2 \otimes b_{2,5} + b_{2,5} \otimes 5
+\Delta b_{3,4} = 3 \otimes b_{3,4} + b_{3,4} \otimes 4
+\Delta b_{5,6} = 5 \otimes b_{5,6} + b_{5,6} \otimes 6
+\Delta b_{7,10} = 7 \otimes b_{7,10} + b_{7,10} \otimes 10
+\Delta b_{8,9} = 8 \otimes b_{8,9} + b_{8,9} \otimes 9
+
+\Delta c_{0,4} = 0 \otimes c_{0,4} + c_{0,4} \otimes 4
+\Delta c_{0,10} = 0 \otimes c_{0,10} + c_{0,10} \otimes 10
+\Delta c_{1,2} = 1 \otimes c_{1,2} + c_{1,2} \otimes 2
+\Delta c_{2,3} = 2 \otimes c_{2,3} + c_{2,3} \otimes 3
+\Delta c_{4,5} = 4 \otimes c_{4,5} + c_{4,5} \otimes 5
+\Delta c_{5,9} = 5 \otimes c_{5,9} + c_{5,9} \otimes 9
+\Delta c_{6,7} = 6 \otimes c_{6,7} + c_{6,7} \otimes 7
+\Delta c_{7,8} = 7 \otimes c_{7,8} + c_{7,8} \otimes 8
+\Delta c_{9,10} = 9 \otimes c_{9,10} + c_{9,10} \otimes 10
+\Delta d_{0,4} = 0 \otimes d_{0,4} + d_{0,4} \otimes 4
+\Delta d_{0,10} = 0 \otimes d_{0,10} + d_{0,10} \otimes 10
+\Delta d_{1,2} = 1 \otimes d_{1,2} + d_{1,2} \otimes 2
+\Delta d_{2,3} = 2 \otimes d_{2,3} + d_{2,3} \otimes 3
+\Delta d_{4,5} = 4 \otimes d_{4,5} + d_{4,5} \otimes 5
+\Delta d_{5,9} = 5 \otimes d_{5,9} + d_{5,9} \otimes 9
+\Delta d_{6,7} = 6 \otimes d_{6,7} + d_{6,7} \otimes 7
+\Delta d_{7,8} = 7 \otimes d_{7,8} + d_{7,8} \otimes 8
+\Delta d_{9,10} = 9 \otimes d_{9,10} + d_{9,10} \otimes 10
+
+\Delta e_{0} = 0 \otimes e_{0} + e_{0} \otimes 10
+\Delta f_{0} = 0 \otimes f_{0} + f_{0} \otimes 10
+\Delta g_{0} = 0 \otimes g_{0} + g_{0} \otimes 10
+\Delta h_{0} = 0 \otimes h_{0} + h_{0} \otimes 10
+
+\Delta j_{1} = 0 \otimes j_{1} + j_{1} \otimes 10 + c_{0,4} \otimes (c_{4,5} + c_{5,9} + c_{9,10}) + c_{4,5} \otimes (c_{5,9} + c_{9,10}) + c_{5,9} \otimes c_{9,10}
+\Delta j_{2} = 0 \otimes j_{2} + j_{2} \otimes 10 + d_{0,4} \otimes (d_{4,5} + d_{5,9} + d_{9,10}) + d_{4,5} \otimes (d_{5,9} + d_{9,10}) + d_{5,9} \otimes d_{9,10}
+
+\Delta e_{1} = 0 \otimes e_{1} + e_{1} \otimes 10 + a_{0,1} \otimes (c_{1,2} + a_{2,8} + a_{8,9} + c_{9,10}) + c_{1,2} \otimes (a_{2,8} + a_{8,9} + c_{9,10}) + a_{2,8} \otimes (a_{8,9} + c_{9,10}) + a_{8,9} \otimes c_{9,10}
+\Delta e_{2} = 2 \otimes e_{2} + e_{2} \otimes 8 + c_{2,3} \otimes (a_{3,4} + a_{4,7} + c_{7,8}) + a_{3,4} \otimes (a_{4,7} + c_{7,8}) + a_{4,7} \otimes c_{7,8}
+\Delta e_{3} =  4 \otimes e_{3} + e_{3} \otimes 7 + c_{4,5} \otimes (a_{5,6} + c_{6,7}) + a_{5,6} \otimes c_{6,7}
+\Delta f_{1} = 0 \otimes f_{1} + f_{1} \otimes 10 + b_{0,1} \otimes (c_{1,2} + b_{2,5} + b_{5,6} + c_{6,7} + b_{7,10}) + c_{1,2} \otimes (b_{2,5} + b_{5,6} + c_{6,7} + b_{7,10}) + b_{2,5} \otimes (b_{5,6} + c_{6,7} + b_{7,10}) + b_{5,6} \otimes (c_{6,7} + b_{7,10}) + c_{6,7} \otimes b_{7,10}
+\Delta f_{2} = 2 \otimes f_{2} + f_{2} \otimes 5 + c_{2,3} \otimes (b_{3,4} + c_{4,5}) + b_{3,4} \otimes c_{4,5}
+\Delta f_{3} =  7 \otimes f_{3} + f_{3} \otimes 10 + c_{7,8} \otimes (b_{8,9} + c_{9,10}) + b_{8,9} \otimes c_{9,10}
+\Delta g_{1} = 0 \otimes g_{1} + g_{1} \otimes 10 + a_{0,1} \otimes (d_{1,2} + a_{2,8} + a_{8,9} + d_{9,10}) + d_{1,2} \otimes (a_{2,8} + a_{8,9} + d_{9,10}) + a_{2,8} \otimes (a_{8,9} + d_{9,10}) + a_{8,9} \otimes d_{9,10}
+\Delta g_{2} = 2 \otimes g_{2} + g_{2} \otimes 8 + d_{2,3} \otimes (a_{3,4} + a_{4,7} + d_{7,8}) + a_{3,4} \otimes (a_{4,7} + d_{7,8}) + a_{4,7} \otimes d_{7,8}
+\Delta g_{3} =  4 \otimes g_{3} + g_{3} \otimes 7 + d_{4,5} \otimes (a_{5,6} + d_{6,7}) + a_{5,6} \otimes d_{6,7}
+\Delta h_{1} = 0 \otimes h_{1} + h_{1} \otimes 10 + b_{0,1} \otimes (d_{1,2} + b_{2,5} + b_{5,6} + d_{6,7} + b_{7,10}) + d_{1,2} \otimes (b_{2,5} + b_{5,6} + d_{6,7} + b_{7,10}) + b_{2,5} \otimes (b_{5,6} + d_{6,7} + b_{7,10}) + b_{5,6} \otimes (d_{6,7} + b_{7,10}) + d_{6,7} \otimes b_{7,10}
+\Delta h_{2} = 2 \otimes h_{2} + h_{2} \otimes 5 + d_{2,3} \otimes (b_{3,4} + d_{4,5}) + b_{3,4} \otimes d_{4,5}
+\Delta h_{3} =  7 \otimes h_{3} + h_{3} \otimes 10 + d_{7,8} \otimes (b_{8,9} + d_{9,10}) + b_{8,9} \otimes d_{9,10}
+
+\Delta r_{0} = 0 \otimes r_{0} + r_{0} \otimes 4 + a_{0,1} \otimes (c_{1,2} + c_{2,3} + a_{3,4}) + c_{1,2} \otimes ( c_{2,3} + a_{3,4}) + c_{2,3} \otimes a_{3,4}
+\Delta r_{5} = 5 \otimes r_{5} + r_{5} \otimes 9 + a_{5,6} \otimes (c_{6,7} + c_{7,8} + a_{8,9}) + c_{6,7} \otimes ( c_{7,8} + a_{8,9}) + c_{7,8} \otimes a_{8,9}
+\Delta s_{0} = 0 \otimes s_{0} + s_{0} \otimes 4 + b_{0,1} \otimes (c_{1,2} + c_{2,3} + b_{3,4}) + c_{1,2} \otimes ( c_{2,3} + b_{3,4}) + c_{2,3} \otimes b_{3,4}
+\Delta s_{5} = 5 \otimes s_{5} + s_{5} \otimes 9 + b_{5,6} \otimes (c_{6,7} + c_{7,8} + b_{8,9}) + c_{6,7} \otimes ( c_{7,8} + b_{8,9}) + c_{7,8} \otimes b_{8,9}
+\Delta t_{0} = 0 \otimes t_{0} + t_{0} \otimes 4 + a_{0,1} \otimes (d_{1,2} + d_{2,3} + a_{3,4}) + d_{1,2} \otimes ( d_{2,3} + a_{3,4}) + d_{2,3} \otimes a_{3,4}
+\Delta t_{5} = 5 \otimes t_{5} + t_{5} \otimes 9 + a_{5,6} \otimes (d_{6,7} + d_{7,8} + a_{8,9}) + d_{6,7} \otimes ( d_{7,8} + a_{8,9}) + d_{7,8} \otimes a_{8,9}
+\Delta u_{0} = 0 \otimes u_{0} + u_{0} \otimes 4 + b_{0,1} \otimes (d_{1,2} + d_{2,3} + b_{3,4}) + d_{1,2} \otimes ( d_{2,3} + b_{3,4}) + d_{2,3} \otimes b_{3,4}
+\Delta u_{5} = 5 \otimes u_{5} + u_{5} \otimes 9 + b_{5,6} \otimes (d_{6,7} + d_{7,8} + b_{8,9}) + d_{6,7} \otimes ( d_{7,8} + b_{8,9}) + d_{7,8} \otimes b_{8,9}
+
+\Delta Q_{1} = 0 \otimes Q_{1} + Q_{1} \otimes 10 + r_{0} \otimes (c_{4,5} + c_{5,9} + c_{9,10}) + r_{5} \otimes c_{9,10} + (a_{0,1} + c_{1,2} + c_{2,3} + a_{3,4} + c_{4,5}) \otimes r_{5} + e_{2} \otimes (a_{8,9} + c_{9,10}) + (a_{0,1} + c_{1,2}) \otimes e_{2} + e_{3} \otimes (c_{7,8} + a_{8,9} + c_{9,10}) + (a_{0,1} + c_{1,2} + c_{2,3} + a_{3,4}) \otimes e_{3}
+\Delta Q_{2} = 0 \otimes Q_{2} + Q_{2} \otimes 10 + s_{0} \otimes (c_{4,5} + b_{5,6} + c_{6,7} + b_{7,10}) + s_{5} \otimes c_{9,10} + (c_{0,4} + c_{4,5}) \otimes s_{5} + f_{2} \otimes (b_{5,6} + c_{6,7} + b_{7,10}) + (b_{0,1} + c_{1,2}) \otimes f_{2} + (c_{0,4} + c_{4,5} + b_{5,6} + c_{6,7}) \otimes f_{3}
+\Delta Q_{3} = 0 \otimes Q_{3} + Q_{3} \otimes 10 + t_{0} \otimes (a_{4,7} + d_{7,8} + a_{8,9} + d_{9,10}) + t_{5} \otimes d_{9,10} + (d_{0,4} + d_{4,5}) \otimes t_{5} + g_{2} \otimes (a_{8,9} + d_{9,10}) + (a_{0,1} + d_{1,2}) \otimes g_{2} + g_{3} \otimes (d_{7,8} + a_{8,9} + d_{9,10}) + d_{0,4} \otimes g_{3}
+\Delta Q_{4} = 0 \otimes Q_{4} + Q_{4} \otimes 10 + u_{0} \otimes (d_{4,5} + b_{5,6} + d_{6,7} + b_{7,10}) + u_{5} \otimes d_{9,10} + (d_{0,4} + d_{4,5}) \otimes u_{5} + h_{2} \otimes (b_{5,6} + d_{6,7} + b_{7,10}) + (b_{0,1} + d_{1,2}) \otimes h_{2} + (d_{0,4} + d_{4,5} + b_{5,6} + d_{6,7}) \otimes h_{3}
+
+\Delta D = 0 \otimes D + D \otimes 10
