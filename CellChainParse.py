@@ -64,7 +64,7 @@ def p_identifier_list_2(p):
 def p_expression_sum_1(p):
     "expression : expression PLUS IDENTIFIER"
     p[0] = p[1]
-    if p[0].has_key(p[3]):
+    if p[3] in p[0]:
         p[0][p[3]] += 1
     else:
         p[0][p[3]] = 1
@@ -72,29 +72,51 @@ def p_expression_sum_1(p):
 def p_expression_sum_2(p):
     "expression : expression PLUS IDENTIFIER OTIMES IDENTIFIER"
     p[0] = p[1]
-    if p[0].has_key((p[3], p[5])):
+    if (p[3], p[5]) in p[0]:
         p[0][(p[3], p[5])] += 1
     else:
         p[0][(p[3], p[5])] = 1
 
-def p_expression_sum_3(p):
+def p_expression_sum_distribute_right(p):
     "expression : expression PLUS IDENTIFIER OTIMES LPAREN expression RPAREN"
     p[0] = p[1]
     for key, value in p[6].iteritems():
-        if p[0].has_key((p[3], key)):
+        if (p[3], key) in p[0]:
             p[0][(p[3], key)] += value
         else:
             p[0][(p[3], key)] = value
+
+def p_expression_sum_distribute_left(p):
+    "expression : expression PLUS LPAREN expression RPAREN OTIMES IDENTIFIER"
+    p[0] = p[1]
+    for key, value in p[4].iteritems():
+        if (key, p[7]) in p[0]:
+            p[0][(key, p[7])] += value
+        else:
+            p[0][(key, p[7])] = value
 
 def p_expression_product(p):
     "expression : IDENTIFIER OTIMES IDENTIFIER"
     p[0] = {(p[1], p[3]): 1}
 
-def p_expression_product_nested(p):
+def p_expression_product_distribute_right(p):
     "expression : IDENTIFIER OTIMES LPAREN expression RPAREN"
     p[0] = {}
     for key, value in p[4].iteritems():
         p[0][(p[1], key)] = value
+
+def p_expression_product_distribute_left(p):
+    "expression : LPAREN expression RPAREN OTIMES IDENTIFIER"
+    p[0] = {}
+    for key, value in p[2].iteritems():
+        p[0][(key, p[5])] = value
+
+def p_expression_product_distribute_both(p):
+    "expression : LPAREN expression RPAREN OTIMES LPAREN expression RPAREN "
+    p[0] = {}
+    for l_key, l_value in p[2].iteritems():
+        for r_key, r_value in p[6]:
+            p[0][(l_key, r_key)] = l_value*r_value
 
 def p_expression_identifier(p):
     "expression : IDENTIFIER"
