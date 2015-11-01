@@ -20,6 +20,8 @@ def formatTuple(t):
         return str(t)
 
 def formatSum(dict_obj):
+    if dict_obj is None:
+        return "0"
     single = [formatTuple(k) for k, v in dict_obj.items() if v == 1]
     multiple = [u"{}*({})".format(v, formatTuple(k)) for k, v in dict_obj.items() if v > 1]
     return " + ".join(single + multiple)
@@ -58,14 +60,17 @@ if len(sys.argv) == 2:
         for i in result["groups"][n]:
 
             # Compute and print \Delta \partial (X)
-            boundary = result["differentials"][i]
+            boundary = result["differentials"][i] if i in result["differentials"] else None
             lhs = DELTA + PARTIAL + str(i)
             print u"{} = {} ({})".format(lhs,  DELTA, formatSum(boundary))
 
             boundary_coproducts = Counter()
-            for k, v in boundary.items():
-                boundary_coproducts += Counter({l: w * v for l, w in result["coproducts"][k].items()})
-            boundary_coproducts = reduceModN(boundary_coproducts)
+            if boundary is None:
+                boundary_coproducts = None
+            else:
+                for k, v in boundary.items():
+                    boundary_coproducts += Counter({l: w * v for l, w in result["coproducts"][k].items()})
+                boundary_coproducts = reduceModN(boundary_coproducts)
             print " " * len(lhs) + " = " + formatSum(boundary_coproducts) + "\n"
 
             # Compute and print (1 \otimes \partial + \partial \otimes 1) \Delta (X)
@@ -81,7 +86,8 @@ if len(sys.argv) == 2:
                 if r in result["differentials"].keys():
                     fullDifferential += Counter({(l, r_diff): v*w for r_diff, w in result["differentials"][r].items()})
             fullDifferential = reduceModN(fullDifferential)
-
+            if not fullDifferential:
+                fullDifferential = None
             print u"{} = {}".format(" "*len(lhs), formatSum(fullDifferential)) + "\n"
 
             # Compare two results
