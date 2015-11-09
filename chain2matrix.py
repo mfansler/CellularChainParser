@@ -1,59 +1,71 @@
-__author__ = 'mfansler'
-
-import sys
+# Standard imports
+from sys import argv
+from sys import stdout
 from re import sub
+from argparse import ArgumentParser
+from argparse import FileType
+
+# Local imports
 import CellChainParse
+from Coalgebra import Coalgebra
+
+__author__ = 'mfansler'
 
 
 def format_cells(cells):
     return sub(',', '_', sub(r'[{}]', '', str(cells)))
 
-
-# Check if input file is specified
-if len(sys.argv) == 2:
-    f = open(sys.argv[1])
-    data = f.read()
-    f.close()
+argparser = ArgumentParser(description="Parses LaTeX descriptions of differential graded coalgebras and outputs incidence matrices")
+argparser.add_argument('--sage', action='store_true', help="output sage matrix")
+argparser.add_argument('--chomp', action='store_true', help="output CHomP matrix")
+argparser.add_argument('--out', '-o', dest='out', type=FileType('w'), help="location to store output")
+argparser.add_argument('file', type=file, help="LaTeX file to be parsed")
+args = None
+try:
+    args = argparser.parse_args()
+except Exception as e:
+    print e.strerror
+    argparser.print_help()
+    raise SystemExit
+else:
+    data = args.file.read()
+    args.file.close()
     result = CellChainParse.parse(data)
 
     if not result:
         raise SystemExit
 
-    topDimension = max([int(g) for g in result["groups"]])
+    f = args.out if args.out else stdout
 
-    differential = {}
+    C = Coalgebra(result["groups"], result["differentials"], result["coproducts"])
 
-    for n in range(1, topDimension + 1):
+    differential = {n: C.incidence_matrix(n) for n in range(1, C.topDimension() + 1)}
 
-        differential[n] = {}
+    if args.sage:
+        for n, entries in differential.iteritems():
 
-        for j, face in enumerate(result["groups"][n]):
+            print >> f, "d{} = matrix(Integers(2), {}, {}, {}, sparse=True)".format(
+                n, len(C.groups[n-1]), len(C.groups[n]), entries
+            )
 
-            if face not in result["differentials"]:
-                print "Warning: Boundary of {} not specified; null is assumed".format(face)
-                continue
+        print >> f, "var({})".format(", ".join(["'" + format_cells(cell) + "'" for group in C.groups.values() for cell in group]))
 
-            for edge, count in result["differentials"][face].iteritems():
+        first = True
+        print >> f, "{ ",
+        for n, group in C.groups.items():
+            if not first:
+                print >> f, ", ",
+            else:
+                first = False
+            print >> f, "{}: matrix(SR, [{}])".format(C.topDimension() - n, ", ".join(
+                ["'" + format_cells(cell) + "'" for cell in group])),
+        print >> f, "}"
 
-                i = result["groups"][n-1].index(edge)
-                differential[n][(i, j)] = count
+    if args.chomp:
+        for n, entries in differential.iteritems():
+            print >> f, n - 1
+            for entry in ["{} {} {}".format(l, r, v) for (l, r), v in entries.iteritems()]:
+                print >> f, entry
 
-    for n, entries in differential.iteritems():
-
-        print "d{} = matrix(Integers(2), {}, {}, {}, sparse=True)".format(
-            n, len(result["groups"][n-1]), len(result["groups"][n]), entries
-        )
-
-    print "var({})".format(", ".join(["'" + format_cells(cell) + "'" for group in result["groups"].values() for cell in group]))
-
-    first = True
-    print "{ ",
-    for n, group in result["groups"].items():
-        if not first:
-            print ", ",
-        else:
-            first = False
-        print "{}: matrix(SR, [{}])".format(topDimension - n, ", ".join(
-            ["'" + format_cells(cell) + "'" for cell in group])),
-    print "}"
-
+    if args.out:
+        f.close()
