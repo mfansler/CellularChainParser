@@ -1,5 +1,4 @@
 # Standard imports
-from sys import argv
 from sys import stdout
 from re import sub
 from argparse import ArgumentParser
@@ -15,7 +14,8 @@ __author__ = 'mfansler'
 def format_cells(cells):
     return sub(',', '_', sub(r'[{}]', '', str(cells)))
 
-argparser = ArgumentParser(description="Parses LaTeX descriptions of differential graded coalgebras and outputs incidence matrices")
+argparser = ArgumentParser(description="Parses LaTeX descriptions of differential "
+                                       "graded coalgebras and outputs incidence matrices")
 argparser.add_argument('--sage', action='store_true', help="output sage matrix")
 argparser.add_argument('--chomp', action='store_true', help="output CHomP matrix")
 argparser.add_argument('--out', '-o', dest='out', type=FileType('w'), help="location to store output")
@@ -48,6 +48,8 @@ else:
                 n, len(C.groups[n-1]), len(C.groups[n]), entries
             )
 
+        print >> f, "ChainComplex({", ", ".join(["{}: d{}".format(n, n) for n in differential.keys()]), "}, degree=-1)"
+
         print >> f, "var({})".format(", ".join(["'" + format_cells(cell) + "'" for group in C.groups.values() for cell in group]))
 
         first = True
@@ -57,7 +59,7 @@ else:
                 print >> f, ", ",
             else:
                 first = False
-            print >> f, "{}: matrix(SR, [{}])".format(C.topDimension() - n, ", ".join(
+            print >> f, "{}: matrix(SR, [{}])".format(n, ", ".join(
                 ["'" + format_cells(cell) + "'" for cell in group])),
         print >> f, "}"
 

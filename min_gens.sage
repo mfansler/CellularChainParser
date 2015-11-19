@@ -37,6 +37,6 @@ def minimal_generators(gens, diffs, max_steps=3, pruning=False, prune_rad=4):
     n = max(diffs.keys())
     return {
         key: gs if gs == [0] else
-        [minimize_generator(g, diffs[key-1], max_steps, pruning=pruning, prune_rad=prune_rad) for g in gs]
+        [minimize_generator(g, diffs[key+1], max_steps, pruning=pruning, prune_rad=prune_rad) for g in gs]
         for key, gs in gens.items()
         }
