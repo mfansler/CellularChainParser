@@ -25,11 +25,13 @@ THETA = u"\u03b8"
 def format_cells(cells):
     return sub(',', '_', sub(r'[{}]', '', str(cells)))
 
+
 def format_tuple(t):
     if type(t) is tuple:
         return u" \u2297 ".join(list(t))
     else:
         return str(t)
+
 
 def format_sum(obj):
     if obj is None:
@@ -39,12 +41,28 @@ def format_sum(obj):
         multiple = [u"{}*({})".format(v, format_tuple(k)) for k, v in obj.items() if v > 1]
         return " + ".join(single + multiple)
     elif type(obj) is list:
-        return '(', " + ".join(v), ')'
+        return '(', " + ".join(obj), ')'
     else:
         return obj
 
+
 def format_morphism(m):
     return u" + ".join([u"{}{}_{{{}}}".format('(' + format_morphism(v) + ')' if type(v) is dict else v, PARTIAL, k) for k, v in m.items()])
+
+
+def tensor(a, b):
+
+    a_max = max(a.keys())
+    b_max = max(b.keys())
+    tensor_groups = {i: [] for i in range(a_max*b_max+1)}
+
+    for m in range(a_max + 1):
+        for n in range(b_max + 1):
+            for l in a[m]:
+                tensor_groups[m+n] += [(l, r) for r in b[n]]
+
+    return tensor_groups
+
 
 argparser = ArgumentParser(description="Computes induced coproduct on homology")
 argparser.add_argument('file', type=file, help="LaTeX file to be parsed")
@@ -137,5 +155,17 @@ for k, v in g.items():
 
 print "beta = ", format_morphism(beta)
 
-# identify theta2 f1 -> Delta g
+CxC = tensor(C.groups, C.groups)
 
+dCxC = {}
+for k, vs in CxC.items():
+    dCxC[k] = []
+    for (l, r) in vs:
+        dLeft = [(l_i, r) for l_i in C.differential[l]] if l in C.differential else []
+        dRight = [(l, r_i) for r_i in C.differential[r]] if r in C.differential else []
+        if dLeft + dRight:
+            dCxC[k].append(dLeft + dRight)
+
+
+for k, v in g.items():
+    print C.coproduct[v].keys()
