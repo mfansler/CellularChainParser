@@ -1,0 +1,33 @@
+% =============================================================================
+% File        : unlinked.tex
+% Authors     : Ronald Umble, Merv Fansler
+% Date        : 2015 11 18
+% Description : Link complement of two unlinked loops in the lower hemisphere
+%               of S^3
+% =============================================================================
+
+% == CELLS ====================================================================
+
+C_{0}(UN) = \{ v \}
+C_{1}(UN) = \{ a, b \}
+C_{2}(UN) = \{ s, t_{1}, t_{2} \}
+C_{3}(UN) = \{ p, q \}
+
+% == BOUNDARY =================================================================
+
+\partial p = s
+\partial q = s + t_{1} + t_{2}
+
+% == COPRODUCT ================================================================
+
+\Delta v = v \otimes v
+
+\Delta a = v \otimes a + a \otimes v
+\Delta b = v \otimes b + b \otimes v
+
+\Delta s = v \otimes s + s \otimes v
+\Delta t_{1} = v \otimes t_{1} + t_{1} \otimes v
+\Delta t_{2} = v \otimes t_{2} + t_{2} \otimes v
+
+\Delta p = v \otimes p + p \otimes v
+\Delta q = v \otimes q + q \otimes v
