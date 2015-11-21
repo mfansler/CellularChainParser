@@ -41,13 +41,17 @@ def format_sum(obj):
         multiple = [u"{}*({})".format(v, format_tuple(k)) for k, v in obj.items() if v > 1]
         return " + ".join(single + multiple)
     elif type(obj) is list:
-        return '(', " + ".join(obj), ')'
+        return "(" + u" + ".join([o for o in obj]) + ")"
     else:
         return obj
 
 
 def format_morphism(m):
-    return u" + ".join([u"{}{}_{{{}}}".format('(' + format_morphism(v) + ')' if type(v) is dict else v, PARTIAL, k) for k, v in m.items()])
+    return u" + ".join([u"{}{}_{{{}}}".format('(' + format_morphism(v) + ')' if type(v) is dict else format_sum(v), PARTIAL, k) for k, v in m.items()])
+
+
+def compare_incidences(x, y):
+    return x[1] - y[1] if x[1] != y[1] else x[0] - y[0]
 
 
 def tensor(a, b):
@@ -100,14 +104,15 @@ scratch = open(temp_mat, 'w+')
 
 for n, entries in differential.iteritems():
     print >> scratch, n - 1
-    for entry in ["{} {} {}".format(l, r, v % 2) for (l, r), v in entries.iteritems()]:
+    incidences = [(l, r, v % 2) for (l, r), v in entries.iteritems()]
+    for entry in ["{} {} {}".format(l, r, v) for (l, r, v) in sorted(incidences, cmp=compare_incidences)]:
         print >> scratch, entry
 
 scratch.close()
 
 try:
-    chomp_results = check_output(["chomp-matrix", temp_mat, "-gp2"])
-    print chomp_results
+    chomp_results = check_output(["chomp-matrix", temp_mat, "-g"])
+    #print chomp_results
 except CalledProcessError as e:
     print e.returncode
     print e.output
@@ -123,6 +128,7 @@ dims = [int(k) for k in compile('\d+').findall(lines[0])]
 H = {}
 offset = 9 + len(dims)
 for n, k in enumerate(dims):
+    #print "debug: ", C.groups[n]
     H[n] = [[C.groups[n][int(j)] for j in compile('\[(\d+)\]').findall(lines[offset + i])] for i in range(k)]
     #print "debug: ", lines[offset], k
     offset += k + 1
@@ -131,18 +137,19 @@ print "H = H*(C) = {",
 print ", ".join(["h{}_{} = {}".format(n, i, gen) for n, gens in H.items() for i, gen in enumerate(gens)]),
 print "}"
 
-
 # Define g
-g = {"h{}_{}".format(n, i): gen[0] for n, gens in H.items() for i, gen in enumerate(gens)}
+g = {"h{}_{}".format(n, i): gen[0] for n, gens in H.items() for i, gen in enumerate(gens) if gen}
 
 print "g = ", format_morphism(g)
+
+# Define g inverse
+g_inv = {v: k for k, v in g.items()}
 
 alpha = {}
 beta = {}
 
 # K2 = Delta
 alpha[THETA+'2'] = C.coproduct
-
 
 # J1 -> g
 
@@ -153,7 +160,9 @@ beta[THETA+'2f1'] = {}
 for k, v in g.items():
     beta[THETA+'2f1'][k] = '(' + format_sum(C.coproduct[v]) + ')'
 
-print "beta = ", format_morphism(beta)
+# define Delta g
+print DELTA + u"g =", format_morphism(beta[THETA+'2f1'])
+#print "beta = ", format_morphism(beta)
 
 CxC = tensor(C.groups, C.groups)
 
@@ -167,5 +176,23 @@ for k, vs in CxC.items():
             dCxC[k].append(dLeft + dRight)
 
 
+delta2 = {}
 for k, v in g.items():
-    print C.coproduct[v].keys()
+    dim = int(k[1])+1
+    img = C.coproduct[v].keys()
+
+    for bd in dCxC[dim]:
+        if all([cell in img for cell in bd]):
+            for cell in bd:
+                img.remove(cell)
+    delta2[k] = img
+
+delta2 = {k: [(g_inv[l], g_inv[r]) for (l, r) in v] for k, v in delta2.items()}
+
+print DELTA + u"_2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in delta2.items()})
+
+
+# (g x g) Delta
+gxgDelta = {k: [(g[l], g[r]) for l, r in v] for k, v in delta2.items()}
+
+print u"(g " + OTIMES + "g)" + DELTA + "_2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in gxgDelta.items()})
