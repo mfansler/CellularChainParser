@@ -47,7 +47,7 @@ def format_sum(obj):
 
 
 def format_morphism(m):
-    return u" + ".join([u"{}{}_{{{}}}".format('(' + format_morphism(v) + ')' if type(v) is dict else format_sum(v), PARTIAL, k) for k, v in m.items()])
+    return u"\n\t+ ".join([u"{}{}_{{{}}}".format('(' + format_morphism(v) + ')' if type(v) is dict else format_sum(v), PARTIAL, k) for k, v in m.items()])
 
 
 def compare_incidences(x, y):
@@ -139,7 +139,7 @@ print "}"
 
 # Define g
 g = {"h{}_{}".format(n, i): gen[0] for n, gens in H.items() for i, gen in enumerate(gens) if gen}
-
+print
 print "g = ", format_morphism(g)
 
 # Define g inverse
@@ -161,6 +161,7 @@ for k, v in g.items():
     beta[THETA+'2f1'][k] = '(' + format_sum(C.coproduct[v]) + ')'
 
 # define Delta g
+print
 print DELTA + u"g =", format_morphism(beta[THETA+'2f1'])
 #print "beta = ", format_morphism(beta)
 
@@ -168,31 +169,51 @@ CxC = tensor(C.groups, C.groups)
 
 dCxC = {}
 for k, vs in CxC.items():
-    dCxC[k] = []
+    dCxC[k] = {}
     for (l, r) in vs:
         dLeft = [(l_i, r) for l_i in C.differential[l]] if l in C.differential else []
         dRight = [(l, r_i) for r_i in C.differential[r]] if r in C.differential else []
         if dLeft + dRight:
-            dCxC[k].append(dLeft + dRight)
+            dCxC[k][(l, r)] = dLeft + dRight
 
 
 delta2 = {}
+g2 = {}
 for k, v in g.items():
     dim = int(k[1])+1
     img = C.coproduct[v].keys()
-
-    for bd in dCxC[dim]:
+    g2[k] = []
+    for chain, bd in dCxC[dim].items():
         if all([cell in img for cell in bd]):
+            g2[k].append(chain)
             for cell in bd:
                 img.remove(cell)
     delta2[k] = img
 
 delta2 = {k: [(g_inv[l], g_inv[r]) for (l, r) in v] for k, v in delta2.items()}
-
+print
 print DELTA + u"_2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in delta2.items()})
 
 
 # (g x g) Delta
 gxgDelta = {k: [(g[l], g[r]) for l, r in v] for k, v in delta2.items()}
 
-print u"(g " + OTIMES + "g)" + DELTA + "_2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in gxgDelta.items()})
+print
+print u"(g " + OTIMES + " g)" + DELTA + "_2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in gxgDelta.items()})
+
+# f^2
+print
+print u"g^2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in g2.items() if v})
+
+# (1 x Delta) g^2
+id_x_Delta_g2 = {k: [(l,) + r_cp for (l, r) in v for r_cp in C.coproduct[r].keys()] for k, v in g2.items()}
+
+print
+print u"(1 " + OTIMES + " " + DELTA + ") g^2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta_g2.items() if v})
+
+
+# (1 x Delta) g^2
+Delta_x_id_g2 = {k: [l_cp + (r,) for (l, r) in v for l_cp in C.coproduct[l].keys()] for k, v in g2.items()}
+
+print
+print u"(" + DELTA + " " + OTIMES + " 1) g^2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in Delta_x_id_g2.items() if v})
