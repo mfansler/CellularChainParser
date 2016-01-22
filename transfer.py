@@ -212,8 +212,23 @@ print
 print u"(1 " + OTIMES + " " + DELTA + ") g^2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta_g2.items() if v})
 
 
-# (1 x Delta) g^2
+# (Delta x 1) g^2
 Delta_x_id_g2 = {k: [l_cp + (r,) for (l, r) in v for l_cp in C.coproduct[l].keys()] for k, v in g2.items()}
 
 print
 print u"(" + DELTA + " " + OTIMES + " 1) g^2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in Delta_x_id_g2.items() if v})
+
+# (g x g^2) Delta_2
+
+g_x_g2_Delta2 = {k: [(g[l],) + t for l, r in v for t in g2[r]] for k, v in delta2.items()}
+
+print
+print u"( g " + OTIMES + " g^2 ) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g_x_g2_Delta2.items() if v})
+
+# (g^2 x g) Delta_2
+
+g2_x_g_Delta2 = {k: [t + (g[r],) for l, r in v for t in g2[l]] for k, v in delta2.items()}
+
+print
+print u"( g^2 " + OTIMES + " g ) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g2_x_g_Delta2.items() if v})
+
