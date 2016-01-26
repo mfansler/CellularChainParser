@@ -68,6 +68,22 @@ def tensor(a, b):
     return tensor_groups
 
 
+def add_maps_mod_2(a, b):
+
+    res = a
+    for k, vals in b.items():
+        if k not in res:
+            res[k] = vals
+        else:
+            for v in vals:
+                if v in res[k]:
+                    res[k] = [u for u in res[k] if u != v]
+                else:
+                    res[k].append(v)
+
+    return res
+
+
 argparser = ArgumentParser(description="Computes induced coproduct on homology")
 argparser.add_argument('file', type=file, help="LaTeX file to be parsed")
 args = None
@@ -232,3 +248,17 @@ g2_x_g_Delta2 = {k: [t + (g[r],) for l, r in v for t in g2[l]] for k, v in delta
 print
 print u"( g^2 " + OTIMES + " g ) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g2_x_g_Delta2.items() if v})
 
+
+id_x_Delta2_Delta2 = {k: [(l,) + r_cp for (l, r) in v for r_cp in delta2[r]] for k, v in delta2.items()}
+
+print
+print u"(1 " + OTIMES + " " + DELTA + "_2) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta2_Delta2.items() if v})
+
+Delta2_x_id_Delta2 = {k: [l_cp + (r,) for (l, r) in v for l_cp in delta2[l]] for k, v in delta2.items()}
+
+print
+print u"(" + DELTA + "_2 " + OTIMES + " 1) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in Delta2_x_id_Delta2.items() if v})
+
+z_1 = add_maps_mod_2(id_x_Delta2_Delta2, Delta2_x_id_Delta2)
+print
+print u"z_1 = (1 " + OTIMES + " " + DELTA + "_2 + " + DELTA + "_2 " + OTIMES + " 1) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in z_1.items() if v})
