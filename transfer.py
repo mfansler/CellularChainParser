@@ -56,15 +56,16 @@ def compare_incidences(x, y):
     return x[1] - y[1] if x[1] != y[1] else x[0] - y[0]
 
 
-def tensor(a, b):
+def tensor(*groups):
 
-    a_max = max(a.keys())
-    b_max = max(b.keys())
-    tensor_groups = {i: [] for i in range(a_max*b_max+1)}
+    def mult(xs):
+        return reduce(lambda a, b: a*b, xs, 1) + 0
 
-    for m in range(a_max + 1):
-        for n in range(b_max + 1):
-            tensor_groups[m+n] += product(a[m], b[n])
+    maxes = [max(g.keys()) for g in groups]
+    tensor_groups = {i: [] for i in range(sum(maxes) + 1)}
+
+    for combin in product(*[range(m+1) for m in maxes]):
+        tensor_groups[sum(combin)] += product(*[groups[i][combin[i]] for i in range(len(groups))])
 
     return tensor_groups
 
@@ -262,8 +263,9 @@ print
 print PHI + u"_1 = (g " + OTIMES + " g^2 + g^2 " + OTIMES + " g) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in phi_1.items() if v})
 
 
-# CxCxC = tensor(C.groups, C.groups, C.groups)
-#
+CxCxC = tensor(C.groups, C.groups, C.groups)
+# print CxCxC # debug
+
 # dCxCxC = {}
 # for k, vs in CxCxC.items():
 #     dCxCxC[k] = {}
