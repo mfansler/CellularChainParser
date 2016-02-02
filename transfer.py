@@ -266,13 +266,14 @@ print PHI + u"_1 = (g " + OTIMES + " g^2 + g^2 " + OTIMES + " g) " + DELTA + "_2
 CxCxC = tensor(C.groups, C.groups, C.groups)
 # print CxCxC # debug
 
-# dCxCxC = {}
-# for k, vs in CxCxC.items():
-#     dCxCxC[k] = {}
-#     for (l, r) in vs:
-#         dLeft = [(l_i, r) for l_i in C.differential[l]] if l in C.differential else []
-#         dRight = [(l, r_i) for r_i in C.differential[r]] if r in C.differential else []
-#         if dLeft + dRight:
-#             dCxCxC[k][(l, r)] = dLeft + dRight
+dCxCxC = {}
+for k, vs in CxCxC.items():
+    dCxCxC[k] = {}
+    for (l, m, r) in vs:
+        dLeft = [(l_i, m, r) for l_i in C.differential[l]] if l in C.differential else []
+        dMiddle = [(l, m_i, r) for m_i in C.differential[m]] if m in C.differential else []
+        dRight = [(l, m, r_i) for r_i in C.differential[r]] if r in C.differential else []
+        if dLeft + dMiddle + dRight:
+            dCxCxC[k][(l, m, r)] = dLeft + dMiddle + dRight
 
-# print CxC # debug
+print dCxCxC # debug
