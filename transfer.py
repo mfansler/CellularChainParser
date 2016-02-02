@@ -20,6 +20,7 @@ PARTIAL = u"\u2202"
 OTIMES  = u"\u2297"
 CHAINPARTIAL = "(1" + OTIMES + PARTIAL + " + " + PARTIAL + OTIMES + "1)"
 THETA = u"\u03b8"
+PHI = u"\u03c6"
 
 
 def format_cells(cells):
@@ -248,17 +249,24 @@ g2_x_g_Delta2 = {k: [t + (g[r],) for l, r in v for t in g2[l]] for k, v in delta
 print
 print u"( g^2 " + OTIMES + " g ) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g2_x_g_Delta2.items() if v})
 
-
+# (1 x Delta_2) Delta_2
 id_x_Delta2_Delta2 = {k: [(l,) + r_cp for (l, r) in v for r_cp in delta2[r]] for k, v in delta2.items()}
 
 print
 print u"(1 " + OTIMES + " " + DELTA + "_2) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta2_Delta2.items() if v})
 
+# (Delta_2 x 1) Delta_2
 Delta2_x_id_Delta2 = {k: [l_cp + (r,) for (l, r) in v for l_cp in delta2[l]] for k, v in delta2.items()}
 
 print
 print u"(" + DELTA + "_2 " + OTIMES + " 1) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in Delta2_x_id_Delta2.items() if v})
 
+# z_1 = (1 x Delta_2 + Delta_2 x 1) Delta_2
 z_1 = add_maps_mod_2(id_x_Delta2_Delta2, Delta2_x_id_Delta2)
 print
 print u"z_1 = (1 " + OTIMES + " " + DELTA + "_2 + " + DELTA + "_2 " + OTIMES + " 1) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in z_1.items() if v})
+
+# phi_1 = (1 x Delta + Delta x 1) g^2 + (g x g^2 + g^2 x g) Delta_2
+phi_1 = add_maps_mod_2(add_maps_mod_2(g_x_g2_Delta2, g2_x_g_Delta2), add_maps_mod_2(id_x_Delta_g2, Delta_x_id_g2))
+print
+print PHI + u"_1 = (g " + OTIMES + " g^2 + g^2 " + OTIMES + " g) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in phi_1.items() if v})
