@@ -276,4 +276,27 @@ for k, vs in CxCxC.items():
         if dLeft + dMiddle + dRight:
             dCxCxC[k][(l, m, r)] = dLeft + dMiddle + dRight
 
-print dCxCxC # debug
+#print CxCxC
+#print dCxCxC # debug
+
+#print [g[k] for k in phi_1.keys() if phi_1[k]]
+
+
+delta3 = {}
+g3 = {} # all boundary found in image will become part of g3
+for k, v in g.items():
+    dim = int(k[1])+2
+
+    img = phi_1[k]
+    g3[k] = []
+    for chain, bd in dCxCxC[dim].items():
+        if all([cell in img for cell in bd]):
+            g3[k].append(chain)
+            for cell in bd:
+                img.remove(cell)
+    delta3[k] = img
+
+delta3 = {k: [(g_inv[l], g_inv[m], g_inv[r]) for (l, m, r) in v] for k, v in delta3.items() if v}
+
+print
+print DELTA + u"_3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in delta3.items()})
