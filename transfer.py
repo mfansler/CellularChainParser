@@ -218,7 +218,7 @@ gxgDelta = {k: [(g[l], g[r]) for l, r in v] for k, v in delta2.items()}
 print
 print u"(g " + OTIMES + " g)" + DELTA + "_2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in gxgDelta.items()})
 
-# f^2
+# g^2
 print
 print u"g^2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in g2.items() if v})
 
@@ -300,3 +300,73 @@ delta3 = {k: [(g_inv[l], g_inv[m], g_inv[r]) for (l, m, r) in v] for k, v in del
 
 print
 print DELTA + u"_3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in delta3.items()})
+
+# g^3
+print
+print u"g^3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in g3.items() if v})
+
+#####################
+# Facets of J_4
+#####################
+
+# (1 x 1 x Delta) g^3
+id_x_id_x_Delta_g3 = {k: [(l, m) + r_cp for (l, m, r) in v for r_cp in C.coproduct[r].keys()] for k, v in g3.items()}
+print
+print u"(1 " + OTIMES + " 1 " + OTIMES + " " + DELTA + ") g^3 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_id_x_Delta_g3.items() if v})
+
+# (1 x Delta x 1) g^3
+id_x_Delta_x_id_g3 = {k: [(l, ) + m_cp + (r, ) for (l, m, r) in v for m_cp in C.coproduct[m].keys()] for k, v in g3.items()}
+print
+print u"(1 " + OTIMES + " " + DELTA + " " + OTIMES + " 1) g^3 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta_x_id_g3.items() if v})
+
+# (Delta x 1 x 1) g^3
+Delta_x_id_x_id_g3 = {k: [l_cp + (m, r) for (l, m, r) in v for l_cp in C.coproduct[l].keys()] for k, v in g3.items()}
+print
+print u"(" + DELTA + " " + OTIMES + " 1 " + OTIMES + " 1) g^3 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in Delta_x_id_x_id_g3.items() if v})
+
+# (g x g^3) Delta_2
+g_x_g3_Delta2 = {k: [(g[l],) + t for l, r in v for t in g3[r]] for k, v in delta2.items()}
+print
+print u"( g " + OTIMES + " g^3 ) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g_x_g3_Delta2.items() if v})
+
+# (g^2 x g^2) Delta_2
+g2_x_g2_Delta2 = {k: [s + t for l, r in v for s in g2[l] for t in g2[r]] for k, v in delta2.items()}
+print
+print u"( g^2 " + OTIMES + " g^2 ) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g2_x_g2_Delta2.items() if v})
+
+# (g^3 x g) Delta_2
+g3_x_g_Delta2 = {k: [t + (g[r],) for l, r in v for t in g3[l]] for k, v in delta2.items()}
+print
+print u"( g^3 " + OTIMES + " g ) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g3_x_g_Delta2.items() if v})
+
+# (g x g x g^2) Delta_3
+g_x_g_x_g2_Delta3 = {k: [(g[l], g[m]) + t for l, m, r in v for t in g2[r]] for k, v in delta3.items()}
+print
+print u"( g " + OTIMES + " g " + OTIMES + " g^2 ) " + DELTA + "_3 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g_x_g_x_g2_Delta3.items() if v})
+
+# (g x g^2 x g) Delta_3
+g_x_g2_x_g_Delta3 = {k: [(g[l], ) + t + (g[r], ) for l, m, r in v for t in g2[m]] for k, v in delta3.items()}
+print
+print u"( g " + OTIMES + " g^2 " + OTIMES + " g ) " + DELTA + "_3 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g_x_g2_x_g_Delta3.items() if v})
+
+# (g^2 x g x g) Delta_3
+g2_x_g_x_g_Delta3 = {k: [t + (g[m], g[r]) for l, m, r in v for t in g2[l]] for k, v in delta3.items()}
+print
+print u"( g^2 " + OTIMES + " g " + OTIMES + " g ) " + DELTA + "_3 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g2_x_g_x_g_Delta3.items() if v})
+
+# phi_2
+phi_2 = add_maps_mod_2(
+    add_maps_mod_2(
+        add_maps_mod_2(
+            add_maps_mod_2(id_x_id_x_Delta_g3, id_x_Delta_x_id_g3),
+            Delta_x_id_x_id_g3),
+        add_maps_mod_2(
+            add_maps_mod_2(g_x_g3_Delta2, g3_x_g_Delta2),
+            g2_x_g2_Delta2)
+        ),
+    add_maps_mod_2(
+        add_maps_mod_2(g_x_g_x_g2_Delta3, g_x_g2_x_g_Delta3),
+        g2_x_g_x_g_Delta3)
+    )
+print
+print PHI + u"_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in phi_2.items() if v})
