@@ -130,7 +130,7 @@ scratch.close()
 
 try:
     chomp_results = check_output(["chomp-matrix", temp_mat, "-g"])
-    #print chomp_results
+    print chomp_results
 except CalledProcessError as e:
     print e.returncode
     print e.output
@@ -370,3 +370,41 @@ phi_2 = add_maps_mod_2(
     )
 print
 print PHI + u"_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in phi_2.items() if v})
+
+
+CxCxCxC = tensor(C.groups, C.groups, C.groups, C.groups)
+# print CxCxCxC # debug
+
+dCxCxCxC = {}
+for k, vs in CxCxCxC.items():
+    dCxCxCxC[k] = {}
+    for (v1, v2, v3, v4) in vs:
+        dv1 = [(v1_i, v2, v3, v4) for v1_i in C.differential[v1]] if v1 in C.differential else []
+        dv2 = [(v1, v2_i, v3, v4) for v2_i in C.differential[v2]] if v2 in C.differential else []
+        dv3 = [(v1, v2, v3_i, v4) for v3_i in C.differential[v3]] if v3 in C.differential else []
+        dv4 = [(v1, v2, v3, v4_i) for v4_i in C.differential[v4]] if v4 in C.differential else []
+        if dv1 + dv2 + dv3 + dv4:
+            dCxCxCxC[k][(v1, v2, v3, v4)] = dv1 + dv2 + dv3 + dv4
+
+delta4 = {}
+g4 = {} # all boundary found in image will become part of g4
+for k, v in g.items():
+    dim = int(k[1])+3
+
+    img = phi_2[k]
+    g4[k] = []
+    for chain, bd in dCxCxCxC[dim].items():
+        if all([cell in img for cell in bd]):
+            g4[k].append(chain)
+            for cell in bd:
+                img.remove(cell)
+    delta4[k] = img
+
+delta4 = {k: [(g_inv[v1], g_inv[v2], g_inv[v3], g_inv[v4]) for (v1, v2, v3, v4) in v] for k, v in delta4.items() if v}
+
+print
+print DELTA + u"_4 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in delta4.items()})
+
+# g^4
+print
+print u"g^4 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in g4.items() if v})

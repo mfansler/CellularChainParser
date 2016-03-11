@@ -1,0 +1,19 @@
+% File        : dgc.txt
+% Authors     : Ronald Umble, Merv Fansler
+% Date        : 2016 3 10
+% Description : A simple differential graded coalgebra.
+% =============================================================================
+
+C_{0}(X) = \{ v \}
+C_{1}(X) = \{ a, b \}
+C_{2}(X) = \{ aa, ab, ba \}
+
+\partial aa = b
+\partial ba = a
+
+\Delta v = v \otimes v
+\Delta a = v \otimes a + a \otimes v
+\Delta b = v \otimes b + b \otimes v
+\Delta aa = v \otimes aa + a \otimes a + aa \otimes v
+\Delta ab = v \otimes ab + a \otimes b + ab \otimes v
+\Delta ba = v \otimes ba + b \otimes a + ba \otimes v
