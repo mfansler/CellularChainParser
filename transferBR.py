@@ -92,6 +92,20 @@ def chain_coproduct(chain, coproduct, simplify=True):
     ps = [p for cell in chain for p, num in coproduct[cell].items() if num % 2]
     return [el for el, num in Counter(ps).items() if num % 2] if simplify else ps
 
+
+def get_vector_in_basis(el, basis):
+
+    # el = [{}, {}]
+    # basis = [ {'h0_0': ['a','b','c',..,'z']}, {'h0_1': ['b', 'c', ...]}, ..., {}]
+    return [1 if v in el[k] else 0 for b in basis for k, v in b.items()]
+
+hom_dim_re = compile('h(\d*)_')
+
+
+def hom_dim(h_element):
+    return int(hom_dim_re.match(h_element).group(1))
+
+
 argparser = ArgumentParser(description="Computes induced coproduct on homology")
 argparser.add_argument('file', type=file, help="LaTeX file to be parsed")
 args = None
@@ -187,20 +201,19 @@ alpha[THETA+'2'] = C.coproduct
 beta['f1'] = g
 
 # BEGIN DEBUG
-for k, vs in g.items():
-    print vs, " => ", '(' + str([res for v in vs for res in C.coproduct[v].keys()]) + ')'
-    print vs, " => ", chain_coproduct(vs, C.coproduct)
+# for k, vs in g.items():
+#     print vs, " => ", '(' + str([res for v in vs for res in C.coproduct[v].keys()]) + ')'
+#    print vs, " => ", chain_coproduct(vs, C.coproduct)
 # END DEBUG
 
 # J2: theta2 f1 -> Delta g
 beta[THETA+'2f1'] = {}
 for k, vs in g.items():
-    beta[THETA+'2f1'][k] = '(' + format_sum([format_sum(C.coproduct[v].keys()) for v in vs]) + ')'
+    beta[THETA+'2f1'][k] = '(' + format_sum(chain_coproduct(vs, C.coproduct)) + ')'
 
 # define Delta g
 print
 print DELTA + u"g =", format_morphism(beta[THETA+'2f1'])
-#print "beta = ", format_morphism(beta)
 
 CxC = tensor(C.groups, C.groups)
 
@@ -218,7 +231,7 @@ delta2 = {}
 g2 = {}
 for k, v in g.items():
     dim = int(k[1])+1
-    img = C.coproduct[v].keys()
+    img = chain_coproduct(v, C.coproduct)
     g2[k] = []
     for chain, bd in dCxC[dim].items():
         if all([cell in img for cell in bd]):
@@ -226,6 +239,20 @@ for k, v in g.items():
             for cell in bd:
                 img.remove(cell)
     delta2[k] = img
+
+print
+print DELTA + u"_2 =", format_morphism(delta2)
+print
+print u"g^2 =", format_morphism(g2)
+print
+print 'H = ', H
+
+H_to_CxC_0 = [{h: cxc} for h in g.keys() for cxc in CxC[hom_dim(h)]]
+delta2_vec = get_vector_in_basis(delta2, H_to_CxC_0)
+HxH = tensor(g.keys(), g.keys())
+
+H_to_HxH_0 = [{h: hxh} for h in g.keys() for hxh in HxH[hom_dim(h)]]
+
 
 delta2 = {k: [(g_inv[l], g_inv[r]) for (l, r) in v] for k, v in delta2.items()}
 print
