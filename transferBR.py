@@ -97,7 +97,7 @@ def get_vector_in_basis(el, basis):
 
     # el = [{}, {}]
     # basis = [ {'h0_0': ['a','b','c',..,'z']}, {'h0_1': ['b', 'c', ...]}, ..., {}]
-    return [1 if v in el[k] else 0 for b in basis for k, v in b.items()]
+    return [1 if k in el and v in el[k] else 0 for b in basis for k, v in b.items()]
 
 hom_dim_re = compile('h(\d*)_')
 
@@ -163,7 +163,7 @@ differential = {n: C.incidence_matrix(n, sparse=False) for n in range(1, C.topDi
 # dims = [int(k) for k in compile('\d+').findall(lines[0])]
 
 
-H = {}
+H_gens = {}
 # offset = 9 + len(dims)
 # for n, k in enumerate(dims):
 #     #print "debug: ", C.groups[n]
@@ -172,17 +172,16 @@ H = {}
 #     offset += k + 1
 
 # Manually entering results from SageMath for basis for homology
-H[0] = [['v_{1}']]
-H[1] = [['m_{11}', 'm_{4}'], ['c_{3}', 'c_{7}'], ['m_{6}', 'm_{9}']]
-H[2] = [['t_{1}', 't_{2}', 't_{3}', 't_{4}'], ['t_{5}', 't_{6}', 't_{7}', 't_{8}']]
-H[3] = []
+H_gens[0] = [['v_{1}']]
+H_gens[1] = [['m_{11}', 'm_{4}'], ['c_{3}', 'c_{7}'], ['m_{6}', 'm_{9}']]
+H_gens[2] = [['t_{1}', 't_{2}', 't_{3}', 't_{4}'], ['t_{5}', 't_{6}', 't_{7}', 't_{8}']]
+#H_gens[3] = []
 
-print "H = H*(C) = {",
-print ", ".join(["h{}_{} = {}".format(n, i, format_sum(gen)) for n, gens in H.items() for i, gen in enumerate(gens)]),
-print "}"
+H = {dim: ["h{}_{}".format(dim, i) for i, gen in enumerate(gens)] for dim, gens in H_gens.items()}
+print "H = H*(C) = ", H
 
 # Define g
-g = {"h{}_{}".format(n, i): gen for n, gens in H.items() for i, gen in enumerate(gens) if gen}
+g = {"h{}_{}".format(dim, i): gen for dim, gens in H_gens.items() for i, gen in enumerate(gens) if gen}
 print
 print "g = ", format_morphism(g)
 
@@ -245,13 +244,26 @@ print DELTA + u"_2 =", format_morphism(delta2)
 print
 print u"g^2 =", format_morphism(g2)
 print
-print 'H = ', H
+#print 'H = ', H
 
-H_to_CxC_0 = [{h: cxc} for h in g.keys() for cxc in CxC[hom_dim(h)]]
+H_to_CxC_0 = [{h: cxc} for dim, hs in H.items() for h in hs for cxc in CxC[dim]]
+print "size[H->CxC] = ", len(H_to_CxC_0)
 delta2_vec = get_vector_in_basis(delta2, H_to_CxC_0)
-HxH = tensor(g.keys(), g.keys())
+HxH = tensor(H, H)
 
-H_to_HxH_0 = [{h: hxh} for h in g.keys() for hxh in HxH[hom_dim(h)]]
+H_to_HxH_0 = [{h: hxh} for dim, hs in H.items() for h in hs for hxh in HxH[dim]]
+print "size[H->HxH] = ", len(H_to_HxH_0)
+
+g_x_g_H_to_HxH_0 = [(hs, {h: [(l,r) for l in g[h_l] for r in g[h_r]] for h, (h_l, h_r) in hs.items()}) for hs in H_to_HxH_0]
+print g_x_g_H_to_HxH_0
+print "size[(gxg)(H->HxH)] = ", len(g_x_g_H_to_HxH_0)
+
+# to vector
+
+g_x_g_H_to_HxH_0_vecs = [(hs, get_vector_in_basis(h_to_cxcs, H_to_CxC_0)) for (hs, h_to_cxcs) in g_x_g_H_to_HxH_0]
+print g_x_g_H_to_HxH_0_vecs
+
+
 
 
 delta2 = {k: [(g_inv[l], g_inv[r]) for (l, r) in v] for k, v in delta2.items()}
