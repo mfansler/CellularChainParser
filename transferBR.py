@@ -9,6 +9,9 @@ from argparse import ArgumentParser
 from itertools import product
 from collections import Counter
 
+import numpy
+from scipy import linalg
+
 # Local imports
 import CellChainParse
 from Coalgebra import Coalgebra
@@ -105,6 +108,32 @@ hom_dim_re = compile('h(\d*)_')
 def hom_dim(h_element):
     return int(hom_dim_re.match(h_element).group(1))
 
+def row_swap(A, r1, r2):
+    tmp = numpy.copy(A[r1, :])
+    A[r1, :] = A[r2, :]
+    A[r2, :] = tmp
+
+
+def row_reduce_mod2(A, augment=-1):
+
+    if A.ndim != 2:
+        print A.ndim
+        raise Exception("require two dimensional matrix input")
+
+    A = numpy.fmod(A, 2)
+    for i in range(min(A.shape[0], A.shape[1] + augment)):
+        nzs = numpy.nonzero(A[i:, i])[0]
+        if nzs.any():
+
+            row_swap(A, i, i + nzs[0])
+
+            for nz in nzs[1:]:
+                A[i + nz, :] = numpy.fmod(A[i + nz, :] + A[i, :], 2)
+
+            if i > 0:
+                for nz in numpy.nonzero(A[:i, i])[0]:
+                    A[nz, :] = numpy.fmod(A[nz, :] + A[i, :], 2)
+    return A
 
 argparser = ArgumentParser(description="Computes induced coproduct on homology")
 argparser.add_argument('file', type=file, help="LaTeX file to be parsed")
@@ -211,8 +240,9 @@ for k, vs in g.items():
     beta[THETA+'2f1'][k] = '(' + format_sum(chain_coproduct(vs, C.coproduct)) + ')'
 
 # define Delta g
+Delta_g = {k: chain_coproduct(v, C.coproduct) for k, v in g.items()}
 print
-print DELTA + u"g =", format_morphism(beta[THETA+'2f1'])
+print DELTA + u"g =", format_morphism(Delta_g)
 
 CxC = tensor(C.groups, C.groups)
 
@@ -228,43 +258,92 @@ for k, vs in CxC.items():
 
 delta2 = {}
 g2 = {}
-for k, v in g.items():
-    dim = int(k[1])+1
-    img = chain_coproduct(v, C.coproduct)
-    g2[k] = []
-    for chain, bd in dCxC[dim].items():
-        if all([cell in img for cell in bd]):
-            g2[k].append(chain)
-            for cell in bd:
-                img.remove(cell)
-    delta2[k] = img
 
-print
-print DELTA + u"_2 =", format_morphism(delta2)
-print
-print u"g^2 =", format_morphism(g2)
-print
+#print "H->dCxC = ", H_to_dCxC_1
+# for k, v in g.items():
+#     dim = int(k[1])+1
+#     img = chain_coproduct(v, C.coproduct)
+#     g2[k] = []
+#     for chain, bd in dCxC[dim].items():
+#         if all([cell in img for cell in bd]):
+#             g2[k].append(chain)
+#             for cell in bd:
+#                 img.remove(cell)
+#     delta2[k] = img
+#
+# print
+# print DELTA + u"_2 =", format_morphism(delta2)
+# print
+# print u"g^2 =", format_morphism(g2)
+# print
 #print 'H = ', H
 
+# basis for vector space
 H_to_CxC_0 = [{h: cxc} for dim, hs in H.items() for h in hs for cxc in CxC[dim]]
 print "size[H->CxC] = ", len(H_to_CxC_0)
-delta2_vec = get_vector_in_basis(delta2, H_to_CxC_0)
+
+# express Delta g in that basis
+print Delta_g
+delta_g_vec = get_vector_in_basis(Delta_g, H_to_CxC_0)
+print len(delta_g_vec)
+
+# generate all possible components of Delta_2, that is Hom_0(H, HxH)
 HxH = tensor(H, H)
-
 H_to_HxH_0 = [{h: hxh} for dim, hs in H.items() for h in hs for hxh in HxH[dim]]
-print "size[H->HxH] = ", len(H_to_HxH_0)
 
+# convert all possible Delta_2 components to H -> HxH -> CxC
+# note that we are keeping the original maps associated with them so they don't get lost
 g_x_g_H_to_HxH_0 = [(hs, {h: [(l,r) for l in g[h_l] for r in g[h_r]] for h, (h_l, h_r) in hs.items()}) for hs in H_to_HxH_0]
-print g_x_g_H_to_HxH_0
+print "size[H->HxH] = ", len(H_to_HxH_0)
 print "size[(gxg)(H->HxH)] = ", len(g_x_g_H_to_HxH_0)
 
-# to vector
-
+# express the Delta2 components in the Hom_0(H, CxC) vector space
 g_x_g_H_to_HxH_0_vecs = [(hs, get_vector_in_basis(h_to_cxcs, H_to_CxC_0)) for (hs, h_to_cxcs) in g_x_g_H_to_HxH_0]
-print g_x_g_H_to_HxH_0_vecs
+#print g_x_g_H_to_HxH_0_vecs
+
+# generate all components in the Hom_0(H, dCxC) space
+H_to_dCxC_1 = [({h: cxc}, {h: dcxc}) for dim, hs in H.items() for h in hs for cxc, dcxc in dCxC[dim+1].items() if dcxc]
+print "size[(H->dCxC)] = ", len(H_to_dCxC_1)
+
+H_to_dCxC_1_vecs = [(hs, get_vector_in_basis(h_to_cxcs, H_to_CxC_0)) for (hs, h_to_cxcs) in H_to_dCxC_1]
 
 
 
+
+X_img = numpy.array([vec for (_, vec) in g_x_g_H_to_HxH_0_vecs]).transpose()
+X_ker = numpy.array([vec for (_, vec) in H_to_dCxC_1_vecs]).transpose()
+y = numpy.array([delta_g_vec]).transpose()
+print X_img.shape, X_ker.shape, y.shape
+print numpy.append(X_img, X_ker, y, axis=1).shape
+#print sum(numpy.all(X == 0, axis=0)), sum(numpy.all(y == 1, axis=0))
+#print numpy.append(X_img, X_ker, axis=1).shape
+#print numpy.linalg.matrix_rank(numpy.append(X_img, X_ker, axis=1))
+
+sols_mat = row_reduce_mod2(numpy.append(X_img, X_ker, y, axis=1))
+numpy.set_printoptions(threshold=numpy.nan)
+
+#print sols_mat
+# we first can eliminate all columns that are entirely zero
+#nonzero_cols = [i for i, val in enumerate(numpy.all(X == 0, axis=0)) if not val]
+#print nonzero_cols
+#print X.transpose()[nonzero_cols[:45], :]
+#X = X[:, nonzero_cols]
+#print numpy.linalg.matrix_rank(X.transpose())
+
+# next we need to narrow down to a linearly independent set
+keepers = reduce(
+    lambda cols, col:
+        cols + [col] if
+            numpy.linalg.matrix_rank(X[:, cols + [col]]) == len(cols) + 1
+        else cols
+    , range(0, X.shape[1]), [])
+
+# print keepers
+# print len(keepers)
+
+coefs = numpy.linalg.solve(X.transpose()[keepers, :], y.transpose()[nonzero_cols, :][keepers, :])
+print coefs
+print "\n".join([str(r) for (l, r) in zip(coefs[0], g_x_g_H_to_HxH_0) if l != 0])
 
 delta2 = {k: [(g_inv[l], g_inv[r]) for (l, r) in v] for k, v in delta2.items()}
 print
