@@ -121,19 +121,22 @@ def row_reduce_mod2(A, augment=-1):
         raise Exception("require two dimensional matrix input")
 
     A = numpy.fmod(A, 2)
-    for i in range(min(A.shape[0], A.shape[1] + augment)):
-        nzs = numpy.nonzero(A[i:, i])[0]
-        if nzs.any():
+    rank = 0
+    for i in range(A.shape[1] + augment):
 
-            row_swap(A, i, i + nzs[0])
+        nzs = numpy.nonzero(A[rank:, i])[0]
+        if len(nzs) > 0:
+
+            row_swap(A, rank, rank + nzs[0])
 
             for nz in nzs[1:]:
-                A[i + nz, :] = numpy.fmod(A[i + nz, :] + A[i, :], 2)
-
+                A[rank + nz, :] = numpy.fmod(A[rank + nz, :] + A[rank, :], 2)
             if i > 0:
-                for nz in numpy.nonzero(A[:i, i])[0]:
-                    A[nz, :] = numpy.fmod(A[nz, :] + A[i, :], 2)
+                for nz in numpy.nonzero(A[:rank, i])[0]:
+                    A[nz, :] = numpy.fmod(A[nz, :] + A[rank, :], 2)
+            rank += 1
     return A
+
 
 argparser = ArgumentParser(description="Computes induced coproduct on homology")
 argparser.add_argument('file', type=file, help="LaTeX file to be parsed")
@@ -280,12 +283,12 @@ g2 = {}
 
 # basis for vector space
 H_to_CxC_0 = [{h: cxc} for dim, hs in H.items() for h in hs for cxc in CxC[dim]]
-print "size[H->CxC] = ", len(H_to_CxC_0)
+#print "size[H->CxC] = ", len(H_to_CxC_0)
 
 # express Delta g in that basis
-print Delta_g
+#print Delta_g
 delta_g_vec = get_vector_in_basis(Delta_g, H_to_CxC_0)
-print len(delta_g_vec)
+#print len(delta_g_vec)
 
 # generate all possible components of Delta_2, that is Hom_0(H, HxH)
 HxH = tensor(H, H)
@@ -294,8 +297,9 @@ H_to_HxH_0 = [{h: hxh} for dim, hs in H.items() for h in hs for hxh in HxH[dim]]
 # convert all possible Delta_2 components to H -> HxH -> CxC
 # note that we are keeping the original maps associated with them so they don't get lost
 g_x_g_H_to_HxH_0 = [(hs, {h: [(l,r) for l in g[h_l] for r in g[h_r]] for h, (h_l, h_r) in hs.items()}) for hs in H_to_HxH_0]
-print "size[H->HxH] = ", len(H_to_HxH_0)
-print "size[(gxg)(H->HxH)] = ", len(g_x_g_H_to_HxH_0)
+#print "size[H->HxH] = ", len(H_to_HxH_0)
+#print "size[(gxg)(H->HxH)] = ", len(g_x_g_H_to_HxH_0)
+#print g_x_g_H_to_HxH_0
 
 # express the Delta2 components in the Hom_0(H, CxC) vector space
 g_x_g_H_to_HxH_0_vecs = [(hs, get_vector_in_basis(h_to_cxcs, H_to_CxC_0)) for (hs, h_to_cxcs) in g_x_g_H_to_HxH_0]
@@ -303,28 +307,44 @@ g_x_g_H_to_HxH_0_vecs = [(hs, get_vector_in_basis(h_to_cxcs, H_to_CxC_0)) for (h
 
 # generate all components in the Hom_0(H, dCxC) space
 H_to_dCxC_1 = [({h: cxc}, {h: dcxc}) for dim, hs in H.items() for h in hs for cxc, dcxc in dCxC[dim+1].items() if dcxc]
-print "size[(H->dCxC)] = ", len(H_to_dCxC_1)
-
+#print "size[(H->dCxC)] = ", len(H_to_dCxC_1)
+#print H_to_dCxC_1
 H_to_dCxC_1_vecs = [(hs, get_vector_in_basis(h_to_cxcs, H_to_CxC_0)) for (hs, h_to_cxcs) in H_to_dCxC_1]
 
 #
 X_img = numpy.array([vec for (_, vec) in g_x_g_H_to_HxH_0_vecs]).transpose()
 X_ker = numpy.array([vec for (_, vec) in H_to_dCxC_1_vecs]).transpose()
 y = numpy.array([delta_g_vec]).transpose()
-print X_img.shape, X_ker.shape, y.shape
-print numpy.append(numpy.append(X_img, X_ker, axis=1), y, axis=1).shape
+#print X_img.shape, X_ker.shape, y.shape
+#print numpy.append(numpy.append(X_img, X_ker, axis=1), y, axis=1).shape
 #print sum(numpy.all(X == 0, axis=0)), sum(numpy.all(y == 1, axis=0))
 #print numpy.append(X_img, X_ker, axis=1).shape
 #print numpy.linalg.matrix_rank(numpy.append(X_img, X_ker, axis=1))
-
-sols_mat = row_reduce_mod2(numpy.append(numpy.append(X_img, X_ker, axis=1), y, axis=1), -1)
+input_matrix = numpy.append(numpy.append(X_img, X_ker, axis=1), y, axis=1)
+#print input_matrix
+sols_mat = row_reduce_mod2(input_matrix, -1)
 numpy.set_printoptions(threshold=numpy.nan)
 
-print sols_mat
-vs = [i for i in numpy.nonzero(sols_mat[:, -1])[0] if sols_mat[i, i]]
-for i in vs:
-    if i < len(g_x_g_H_to_HxH_0_vecs):
-        print g_x_g_H_to_HxH_0_vecs[i]
-    else:
-        print H_to_dCxC_1[i - len(g_x_g_H_to_HxH_0_vecs)]
+#print sols_mat
 
+
+vs = [i for i in numpy.nonzero(sols_mat[:, -1])[0]]
+for i in vs:
+    # get leftmost non-zero column
+    j = numpy.nonzero(sols_mat[i, :])[0][0]
+    #print j
+    if j < len(g_x_g_H_to_HxH_0_vecs):
+        for h, hxh in g_x_g_H_to_HxH_0_vecs[j][0].items():
+            delta2[h] = delta2[h] + [hxh] if h in delta2 else [hxh]
+        #print g_x_g_H_to_HxH_0_vecs[i]
+    else:
+        for h, cxc in H_to_dCxC_1[j - len(g_x_g_H_to_HxH_0_vecs)][0].items():
+            g2[h] = g2[h] + [cxc] if h in g2 else [cxc]
+        #print H_to_dCxC_1[i - len(g_x_g_H_to_HxH_0_vecs)]
+
+print
+print DELTA + u"_2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in delta2.items()})
+
+# g^2
+print
+print u"g^2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in g2.items() if v})
