@@ -12,6 +12,10 @@ from collections import Counter
 import numpy
 from scipy import linalg
 
+import sys
+import codecs
+sys.stdout=codecs.getwriter('utf-8')(sys.stdout)
+
 # Local imports
 import CellChainParse
 from Coalgebra import Coalgebra
@@ -335,10 +339,10 @@ sols_mat = row_reduce_mod2(input_matrix, -1)
 
 #print sols_mat
 
-delta2 = {}
-g2 = {}
+delta2 = {k: [] for k in g.keys()}
+g2 = {k: [] for k in g.keys()}
 
-vs = [i for i in numpy.nonzero(sols_mat[:, -1])[0] if sols_mat[i, i]]
+vs = [i for i in numpy.nonzero(sols_mat[:, -1])[0]]
 for i in vs:
     # get leftmost non-zero column
     j = numpy.nonzero(sols_mat[i, :])[0][0]
