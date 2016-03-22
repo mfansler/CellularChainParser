@@ -26,10 +26,11 @@ temp_mat = "~transfer-temp.mat"
 # chars
 DELTA   = u"\u0394"
 PARTIAL = u"\u2202"
+NABLA   = u"\u2207"
 OTIMES  = u"\u2297"
+THETA   = u"\u03b8"
+PHI     = u"\u03c6"
 CHAINPARTIAL = "(1" + OTIMES + PARTIAL + " + " + PARTIAL + OTIMES + "1)"
-THETA = u"\u03b8"
-PHI = u"\u03c6"
 
 # Debugging
 #numpy.set_printoptions(threshold=numpy.nan)
@@ -144,6 +145,18 @@ def row_reduce_mod2(A, augment=-1):
             rank += 1
     return A
 
+def differential2_space(AxA, diff_op):
+
+    dAxA = {}
+    for dim, vs in AxA.items():
+        dAxA[dim] = {}
+        for (l, r) in vs:
+            dLeft = [(l_i, r) for l_i in diff_op[l]] if l in diff_op else []
+            dRight = [(l, r_i) for r_i in diff_op[r]] if r in diff_op else []
+            if dLeft + dRight:
+                dAxA[dim][(l, r)] = dLeft + dRight
+
+    return dAxA
 
 argparser = ArgumentParser(description="Computes induced coproduct on homology")
 argparser.add_argument('file', type=file, help="LaTeX file to be parsed")
@@ -206,7 +219,7 @@ H_gens = {}
 # offset = 9 + len(dims)
 # for n, k in enumerate(dims):
 #     #print "debug: ", C.groups[n]
-#     H[n] = [[C.groups[n][int(j)] for j in compile('\[(\d+)\]').findall(lines[offset + i])] for i in range(k)]
+#     H_gens[n] = [[C.groups[n][int(j)] for j in compile('\[(\d+)\]').findall(lines[offset + i])] for i in range(k)]
 #     #print "debug: ", lines[offset], k
 #     offset += k + 1
 
@@ -224,7 +237,7 @@ g = {"h{}_{}".format(dim, i): gen for dim, gens in H_gens.items() for i, gen in 
 print
 print "g = ", format_morphism(g)
 
-# IMPORTANT: g_inv can no longer be defined
+# IMPORTANT: is there a general way to define g_inv???
 # Define g inverse
 # g_inv = {v: k for k, v in g.items()}
 
@@ -238,32 +251,27 @@ alpha[THETA+'2'] = C.coproduct
 
 beta['f1'] = g
 
-# BEGIN DEBUG
-# for k, vs in g.items():
-#     print vs, " => ", '(' + str([res for v in vs for res in C.coproduct[v].keys()]) + ')'
-#    print vs, " => ", chain_coproduct(vs, C.coproduct)
-# END DEBUG
-
-# J2: theta2 f1 -> Delta g
-beta[THETA+'2f1'] = {}
-for k, vs in g.items():
-    beta[THETA+'2f1'][k] = '(' + format_sum(chain_coproduct(vs, C.coproduct)) + ')'
-
 # define Delta g
 Delta_g = {k: chain_coproduct(v, C.coproduct) for k, v in g.items()}
 print
 print DELTA + u"g =", format_morphism(Delta_g)
 
+# J2: theta2 f1 -> Delta g
+beta[THETA+'2f1'] = Delta_g
+
+# CxC
 CxC = tensor(C.groups, C.groups)
 
-dCxC = {}
-for k, vs in CxC.items():
-    dCxC[k] = {}
-    for (l, r) in vs:
-        dLeft = [(l_i, r) for l_i in C.differential[l]] if l in C.differential else []
-        dRight = [(l, r_i) for r_i in C.differential[r]] if r in C.differential else []
-        if dLeft + dRight:
-            dCxC[k][(l, r)] = dLeft + dRight
+# dCxC
+dCxC = differential2_space(CxC, C.differential)
+
+# for k, vs in CxC.items():
+#     dCxC[k] = {}
+#     for (l, r) in vs:
+#         dLeft = [(l_i, r) for l_i in C.differential[l]] if l in C.differential else []
+#         dRight = [(l, r_i) for r_i in C.differential[r]] if r in C.differential else []
+#         if dLeft + dRight:
+#             dCxC[k][(l, r)] = dLeft + dRight
 
 # print "dCxC[0] = ", dCxC[0]
 # print "dCxC[1] = ",
@@ -294,9 +302,7 @@ H_to_CxC_0 = [{h: cxc} for dim, hs in H.items() for h in hs for cxc in CxC[dim]]
 #print "size[H->CxC] = ", len(H_to_CxC_0)
 
 # express Delta g in that basis
-#print Delta_g
 delta_g_vec = get_vector_in_basis(Delta_g, H_to_CxC_0)
-#print len(delta_g_vec)
 
 # generate all possible components of Delta_2, that is Hom_0(H, HxH)
 HxH = tensor(H, H)
@@ -305,39 +311,22 @@ H_to_HxH_0 = [{h: hxh} for dim, hs in H.items() for h in hs for hxh in HxH[dim]]
 # convert all possible Delta_2 components to H -> HxH -> CxC
 # note that we are keeping the original maps associated with them so they don't get lost
 g_x_g_H_to_HxH_0 = [(hs, {h: [(l, r) for l in g[h_l] for r in g[h_r]] for h, (h_l, h_r) in hs.items()}) for hs in H_to_HxH_0]
-#print "size[H->HxH] = ", len(H_to_HxH_0)
-#print "size[(gxg)(H->HxH)] = ", len(g_x_g_H_to_HxH_0)
-# for thing in g_x_g_H_to_HxH_0:
-#     print thing
 
 # express the Delta2 components in the Hom_0(H, CxC) vector space
 g_x_g_H_to_HxH_0_vecs = [(hs, get_vector_in_basis(h_to_cxcs, H_to_CxC_0)) for (hs, h_to_cxcs) in g_x_g_H_to_HxH_0]
-#print [(hs, sum(vec)) for (hs, vec) in g_x_g_H_to_HxH_0_vecs]
 
 # generate all components in the Hom_0(H, dCxC) space
 H_to_dCxC_1 = [({h: cxc}, {h: dcxc}) for dim, hs in H.items() for h in hs for cxc, dcxc in dCxC[dim+1].items() if dcxc]
-#print "size[(H->dCxC)] = ", len(H_to_dCxC_1)
 
+# convert into basis
 H_to_dCxC_1_vecs = [(hs, get_vector_in_basis(h_to_cxcs, H_to_CxC_0)) for (hs, h_to_cxcs) in H_to_dCxC_1]
-# print H_to_dCxC_1[:10]
 
 X_img = numpy.array([vec for (_, vec) in g_x_g_H_to_HxH_0_vecs]).transpose()
 X_ker = numpy.array([vec for (_, vec) in H_to_dCxC_1_vecs]).transpose()
-# rank(ker) = 5014
 y = numpy.array([delta_g_vec]).transpose()
 
-#rref_ker = row_reduce_mod2(X_ker, 0)
-#print "nonzero rows = ", sum(numpy.any(rref_ker[:,:5425] != 0, axis=1))
-
-#print X_img.shape, X_ker.shape, y.shape
-#print numpy.append(numpy.append(X_img, X_ker, axis=1), y, axis=1).shape
-#print sum(numpy.all(X == 0, axis=0)), sum(numpy.all(y == 1, axis=0))
-#print numpy.append(X_img, X_ker, axis=1).shape
-#print numpy.linalg.matrix_rank(numpy.append(X_img, X_ker, axis=1))
 input_matrix = numpy.append(numpy.append(X_img, X_ker, axis=1), y, axis=1)
 sols_mat = row_reduce_mod2(input_matrix, -1)
-
-#print sols_mat
 
 delta2 = {k: [] for k in g.keys()}
 g2 = {k: [] for k in g.keys()}
@@ -364,9 +353,37 @@ print u"g^2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in g2.
 
 # (g x g) Delta
 gxgDelta = {k: [(g_l, g_r) for l, r in v for g_l in g[l] for g_r in g[r]] for k, v in delta2.items()}
-#print gxgDelta
 print
 print u"(g " + OTIMES + " g)" + DELTA + "_2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in gxgDelta.items()})
+
+# VERIFY: DELTA g = (g x g) DELTA_2 + NABLA g^2
+
+# NABLA g^2
+nabla_g2 = {}
+for k, vs in g2.items():
+    nabla_g2[k] = []
+    for (l, r) in vs:
+        dLeft = [(l_i, r) for l_i in C.differential[l]] if l in C.differential else []
+        dRight = [(l, r_i) for r_i in C.differential[r]] if r in C.differential else []
+        if dLeft + dRight:
+            nabla_g2[k] += dLeft + dRight
+
+print
+print NABLA + u" g^2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in nabla_g2.items() if v})
+
+# (g x g) DELTA_2 + NABLA g^2
+sum_Delta_g = add_maps_mod_2(gxgDelta, nabla_g2)
+print
+print u"(g " + OTIMES + " g)" + DELTA + "_2 + " + NABLA + " g^2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in sum_Delta_g.items()})
+
+# Delta g = (g x g) DELTA_2 + NABLA g^2
+print
+print DELTA + " g = (g " + OTIMES + " g)" + DELTA + "_2 + " + NABLA + " g^2 : ",
+print all([vs == [] for vs in add_maps_mod_2(sum_Delta_g, Delta_g).values()])
+
+#--------------------------------------------#
+
+
 
 # (1 x Delta) g^2
 id_x_Delta_g2 = {k: [(l,) + r_cp for (l, r) in v for r_cp in C.coproduct[r].keys()] for k, v in g2.items()}

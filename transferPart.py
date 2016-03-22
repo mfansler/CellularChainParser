@@ -348,3 +348,4 @@ print DELTA + u"_2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v
 # g^2
 print
 print u"g^2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in g2.items() if v})
+
