@@ -396,12 +396,12 @@ print
 print u"(" + DELTA + " " + OTIMES + " 1) g^2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in Delta_x_id_g2.items() if v})
 
 # (g x g^2) Delta_2
-g_x_g2_Delta2 = {k: [(g[l],) + t for l, r in v for t in g2[r]] for k, v in delta2.items()}
+g_x_g2_Delta2 = {k: [(l_cp,) + t for l, r in v for t in g2[r] for l_cp in g[l]] for k, v in delta2.items()}
 print
 print u"( g " + OTIMES + " g^2 ) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g_x_g2_Delta2.items() if v})
 
 # (g^2 x g) Delta_2
-g2_x_g_Delta2 = {k: [t + (g[r],) for l, r in v for t in g2[l]] for k, v in delta2.items()}
+g2_x_g_Delta2 = {k: [t + (r_cp,) for l, r in v for t in g2[l] for r_cp in g[r]] for k, v in delta2.items()}
 print
 print u"( g^2 " + OTIMES + " g ) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g2_x_g_Delta2.items() if v})
 
@@ -421,13 +421,11 @@ print
 print u"z_1 = (1 " + OTIMES + " " + DELTA + "_2 + " + DELTA + "_2 " + OTIMES + " 1) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in z_1.items() if v})
 
 # phi_1 = (1 x Delta + Delta x 1) g^2 + (g x g^2 + g^2 x g) Delta_2
-phi_1 = add_maps_mod_2(add_maps_mod_2(g_x_g2_Delta2, g2_x_g_Delta2), add_maps_mod_2(id_x_Delta_g2, Delta_x_id_g2))
+phi_1 = reduce(add_maps_mod_2, [g_x_g2_Delta2, g2_x_g_Delta2, id_x_Delta_g2, Delta_x_id_g2], {})
 print
 print PHI + u"_1 = (g " + OTIMES + " g^2 + g^2 " + OTIMES + " g) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in phi_1.items() if v})
 
-
 CxCxC = tensor(C.groups, C.groups, C.groups)
-# print CxCxC # debug
 
 dCxCxC = {}
 for k, vs in CxCxC.items():
@@ -439,27 +437,62 @@ for k, vs in CxCxC.items():
         if dLeft + dMiddle + dRight:
             dCxCxC[k][(l, m, r)] = dLeft + dMiddle + dRight
 
-#print CxCxC
-#print dCxCxC # debug
-
-#print [g[k] for k in phi_1.keys() if phi_1[k]]
-
 
 delta3 = {}
-g3 = {} # all boundary found in image will become part of g3
-for k, v in g.items():
-    dim = int(k[1])+2
+g3 = {}
 
-    img = phi_1[k]
-    g3[k] = []
-    for chain, bd in dCxCxC[dim].items():
-        if all([cell in img for cell in bd]):
-            g3[k].append(chain)
-            for cell in bd:
-                img.remove(cell)
-    delta3[k] = img
+# for k, v in g.items():
+#     dim = int(k[1])+2
+#
+#     img = phi_1[k]
+#     g3[k] = []
+#     for chain, bd in dCxCxC[dim].items():
+#         if all([cell in img for cell in bd]):
+#             g3[k].append(chain)
+#             for cell in bd:
+#                 img.remove(cell)
+#     delta3[k] = img
+#
+# delta3 = {k: [(g_inv[l], g_inv[m], g_inv[r]) for (l, m, r) in v] for k, v in delta3.items() if v}
 
-delta3 = {k: [(g_inv[l], g_inv[m], g_inv[r]) for (l, m, r) in v] for k, v in delta3.items() if v}
+# basis for vector space
+H_to_CxCxC_0 = [{h: cxcxc} for dim, hs in H.items() for h in hs for cxcxc in CxCxC[dim]]
+
+phi_1_vec = get_vector_in_basis(phi_1, H_to_CxCxC_0)
+
+HxHxH = tensor(H, H, H)
+H_to_HxHxH_0 = [{h: hxhxh} for dim, hs in H.items() for h in hs for hxhxh in HxHxH[dim]]
+gxgxg_H_to_HxHxH_0 = [(hs, {h: [(l, m, r) for l in g[h_l] for m in g[h_m] for r in g[h_r]]
+                            for h, (h_l, h_m, h_r) in hs.items()}) for hs in H_to_HxHxH_0]
+gxgxg_H_to_HxHxH_0_vecs = [(hs, get_vector_in_basis(h_to_cxcxcs, H_to_CxCxC_0)) for (hs, h_to_cxcxcs) in gxgxg_H_to_HxHxH_0]
+
+
+# generate all components in the Hom_0(H, dCxCxC) space
+H_to_dCxCxC_1 = [({h: cxcxc}, {h: dcxcxc}) for dim, hs in H.items() for h in hs for cxcxc, dcxcxc in dCxCxC[dim+2].items() if dcxcxc]
+#print "size[(H->dCxC)] = ", len(H_to_dCxC_1)
+#print H_to_dCxC_1
+H_to_dCxCxC_1_vecs = [(hs, get_vector_in_basis(h_to_cxcxcs, H_to_CxCxC_0)) for (hs, h_to_cxcxcs) in H_to_dCxCxC_1]
+
+X_img = numpy.array([vec for (_, vec) in gxgxg_H_to_HxHxH_0_vecs]).transpose()
+X_ker = numpy.array([vec for (_, vec) in H_to_dCxCxC_1_vecs]).transpose()
+y = numpy.array([phi_1_vec]).transpose()
+input_matrix = numpy.append(numpy.append(X_img, X_ker, axis=1), y, axis=1)
+sols_mat = row_reduce_mod2(input_matrix, -1)
+
+vs = [i for i in numpy.nonzero(sols_mat[:, -1])[0]]
+for i in vs:
+    # get leftmost non-zero column
+    j = numpy.nonzero(sols_mat[i, :])[0][0]
+    #print j
+    if j < len(gxgxg_H_to_HxHxH_0_vecs):
+        for h, hxhxh in gxgxg_H_to_HxHxH_0_vecs[j][0].items():
+            delta3[h] = delta3[h] + [hxhxh] if h in delta3 else [hxhxh]
+        #print g_x_g_H_to_HxH_0_vecs[i]
+    else:
+        for h, cxcxc in H_to_dCxCxC_1[j - len(gxgxg_H_to_HxHxH_0_vecs)][0].items():
+            g3[h] = g3[h] + [cxcxc] if h in g3 else [cxcxc]
+        #print H_to_dCxC_1[i - len(g_x_g_H_to_HxH_0_vecs)]
+
 
 print
 print DELTA + u"_3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in delta3.items()})
@@ -468,6 +501,7 @@ print DELTA + u"_3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v
 print
 print u"g^3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in g3.items() if v})
 
+exit()
 #####################
 # Facets of J_4
 #####################
@@ -518,19 +552,8 @@ print
 print u"( g^2 " + OTIMES + " g " + OTIMES + " g ) " + DELTA + "_3 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g2_x_g_x_g_Delta3.items() if v})
 
 # phi_2
-phi_2 = add_maps_mod_2(
-    add_maps_mod_2(
-        add_maps_mod_2(
-            add_maps_mod_2(id_x_id_x_Delta_g3, id_x_Delta_x_id_g3),
-            Delta_x_id_x_id_g3),
-        add_maps_mod_2(
-            add_maps_mod_2(g_x_g3_Delta2, g3_x_g_Delta2),
-            g2_x_g2_Delta2)
-        ),
-    add_maps_mod_2(
-        add_maps_mod_2(g_x_g_x_g2_Delta3, g_x_g2_x_g_Delta3),
-        g2_x_g_x_g_Delta3)
-    )
+phi_2 = reduce(add_maps_mod_2, [id_x_id_x_Delta_g3, id_x_Delta_x_id_g3, Delta_x_id_x_id_g3, g_x_g3_Delta2,
+                                g3_x_g_Delta2, g2_x_g2_Delta2, g_x_g_x_g2_Delta3, g_x_g2_x_g_Delta3, g2_x_g_x_g_Delta3], {})
 print
 print PHI + u"_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in phi_2.items() if v})
 
