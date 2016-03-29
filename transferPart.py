@@ -10,7 +10,8 @@ from itertools import product
 from collections import Counter
 
 import numpy
-from scipy import linalg
+import scipy.sparse as sparse
+import scipy.sparse.sparsetools as sparsetools
 
 # Local imports
 import CellChainParse
@@ -318,13 +319,13 @@ def H_to_dCxC_1_vecs():
     return ((hs, get_vector_in_basis(h_to_cxcs, H_to_CxC_0())) for (hs, h_to_cxcs) in H_to_dCxC_1())
 
 #
-X_img = numpy.array([vec for (_, vec) in g_x_g_H_to_HxH_0_vecs()]).transpose()
-X_ker = numpy.array([vec for (_, vec) in H_to_dCxC_1_vecs()]).transpose()
-y = numpy.array([delta_g_vec]).transpose()
+X_img = numpy.array([vec for (_, vec) in g_x_g_H_to_HxH_0_vecs()], dtype=numpy.int8).transpose()
+X_ker = numpy.array([vec for (_, vec) in H_to_dCxC_1_vecs()], dtype=numpy.int8).transpose()
+y = numpy.array([delta_g_vec], dtype=numpy.int8).transpose()
 
 img_size = X_img.shape[1]
 input_matrix = numpy.append(numpy.append(X_img, X_ker, axis=1), y, axis=1)
-
+#print input_matrix
 sols_mat = row_reduce_mod2(input_matrix, -1)
 numpy.set_printoptions(threshold=numpy.nan)
 
