@@ -1,6 +1,9 @@
 import numpy
 import scipy.sparse as sp
 
+from collections import Counter
+from itertools import combinations
+
 from Coalgebra import Coalgebra
 
 def row_swap(A, r1, r2):
@@ -42,6 +45,13 @@ def row_reduce_mod2(A, augment=0):
 
     return A, rank
 
+def list_mod(ls, modulus=2):
+    return [s for s, num in Counter(ls).items() if num % modulus]
+
+
+def all_combinations(x):
+    return (c for i in range(len(x)+1) for c in combinations(x, i))
+
 
 def compute_f(C, g):
 
@@ -81,22 +91,68 @@ def compute_f(C, g):
 
         return zombies.any()
 
-    # on f still needs to do a little more
-    # has_zombies is just a helper function
-    return has_zombies
+    def f(x):
+
+        bd = list_mod([dx for cell in x if cell in C.differential for dx in C.differential[cell].items()], 2)
+
+        if bd:
+            # not a cycle!
+            return []
+        else:
+            if not has_zombies(x):
+                # cycle was completely killed by boundary
+                return []
+            else:
+                # TODO: verify that single elements are sufficient
+                for ks in all_combinations(g.keys()):
+                    gens = [gen_comp for k in ks for gen_comp in g[k]]
+                    print ks
+                    if not has_zombies(list_mod(gens + x, 2)):
+                        return list(ks)
+
+                raise Exception("Error: could not find coset!\n", x)
+
+    return f
 
 
-# test data
-C = Coalgebra(
+# test data toy
+DGC = Coalgebra(
     {0: ['v'], 1: ['a', 'b'], 2: ['aa', 'ab']},
     {'aa': {'b': 1}},
     {}
 )
 
-f = compute_f(C, {})
+DGC_g = {'h1_0': ['a'], 'h0_0': ['v'], 'h2_0': ['ab']}
 
+f = compute_f(DGC, DGC_g)
+
+print "DGC Toy"
 print "f(v) = ", f(['v'])
 print "f(a) = ", f(['a'])
 print "f(b) = ", f(['b'])
 print "f(aa) = ", f(['aa'])
 print "f(ab) = ", f(['ab'])
+print "f(a + b) = ", f(['a', 'b'])
+print "f(aa + ab) = ", f(['aa', 'ab'])
+
+
+# test data linked
+LNK = Coalgebra(
+    {0: ['v'], 1: ['a', 'b'], 2: ['s', 't_{1}', 't_{2}'], 3: ['p', 'q']},
+    {'q': {'s': 1, 't_{2}': 1, 't_{1}': 1}, 'p': {'s': 1}},
+    {}
+)
+
+LNK_g = {'h1_0': ['a'], 'h0_0': ['v'], 'h2_0': ['t_{1}'], 'h1_1': ['b']}
+
+f = compute_f(LNK, LNK_g)
+
+print "\n\nLINKED"
+print "f(v) = ", f(['v'])
+print "f(a) = ", f(['a'])
+print "f(b) = ", f(['b'])
+print "f(s) = ", f(['s'])
+print "f(t_{1}) = ", f(['t_{1}'])
+print "f(t_{2}) = ", f(['t_{2}'])
+print "f(p) = ", f(['p'])
+print "f(q) = ", f(['q'])
