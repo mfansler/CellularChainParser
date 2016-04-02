@@ -298,51 +298,66 @@ dCxC = differential2_space(CxC, C.differential)
 #print 'H = ', H
 
 # basis for vector space
-H_to_CxC_0 = [{h: cxc} for dim, hs in H.items() for h in hs for cxc in CxC[dim]]
+def H_to_CxC_0():
+    return ({h: cxc} for dim, hs in H.items() for h in hs for cxc in CxC[dim])
 #print "size[H->CxC] = ", len(H_to_CxC_0)
 
 # express Delta g in that basis
-delta_g_vec = get_vector_in_basis(Delta_g, H_to_CxC_0)
+delta_g_vec = get_vector_in_basis(Delta_g, H_to_CxC_0())
 
 # generate all possible components of Delta_2, that is Hom_0(H, HxH)
 HxH = tensor(H, H)
-H_to_HxH_0 = [{h: hxh} for dim, hs in H.items() for h in hs for hxh in HxH[dim]]
+def H_to_HxH_0():
+    return ({h: hxh} for dim, hs in H.items() for h in hs for hxh in HxH[dim])
 
 # convert all possible Delta_2 components to H -> HxH -> CxC
 # note that we are keeping the original maps associated with them so they don't get lost
-g_x_g_H_to_HxH_0 = [(hs, {h: [(l, r) for l in g[h_l] for r in g[h_r]] for h, (h_l, h_r) in hs.items()}) for hs in H_to_HxH_0]
+def g_x_g_H_to_HxH_0():
+    return ((hs, {h: [(l, r) for l in g[h_l] for r in g[h_r]] for h, (h_l, h_r) in hs.items()}) for hs in H_to_HxH_0())
 
 # express the Delta2 components in the Hom_0(H, CxC) vector space
-g_x_g_H_to_HxH_0_vecs = [(hs, get_vector_in_basis(h_to_cxcs, H_to_CxC_0)) for (hs, h_to_cxcs) in g_x_g_H_to_HxH_0]
+def g_x_g_H_to_HxH_0_vecs():
+    return ((hs, get_vector_in_basis(h_to_cxcs, H_to_CxC_0())) for (hs, h_to_cxcs) in g_x_g_H_to_HxH_0())
 
 # generate all components in the Hom_0(H, dCxC) space
-H_to_dCxC_1 = [({h: cxc}, {h: dcxc}) for dim, hs in H.items() for h in hs for cxc, dcxc in dCxC[dim+1].items() if dcxc]
+def H_to_dCxC_1():
+    return (({h: cxc}, {h: dcxc}) for dim, hs in H.items() for h in hs for cxc, dcxc in dCxC[dim+1].items() if dcxc)
 
 # convert into basis
-H_to_dCxC_1_vecs = [(hs, get_vector_in_basis(h_to_cxcs, H_to_CxC_0)) for (hs, h_to_cxcs) in H_to_dCxC_1]
+def H_to_dCxC_1_vecs():
+    return ((hs, get_vector_in_basis(h_to_cxcs, H_to_CxC_0())) for (hs, h_to_cxcs) in H_to_dCxC_1())
 
-X_img = numpy.array([vec for (_, vec) in g_x_g_H_to_HxH_0_vecs]).transpose()
-X_ker = numpy.array([vec for (_, vec) in H_to_dCxC_1_vecs]).transpose()
-y = numpy.array([delta_g_vec]).transpose()
+print "DEBUG: generating matrices"
+X_img = numpy.array([vec for (_, vec) in g_x_g_H_to_HxH_0_vecs()], dtype=numpy.int8).transpose()
+X_ker = numpy.array([vec for (_, vec) in H_to_dCxC_1_vecs()], dtype=numpy.int8).transpose()
+y = numpy.array([delta_g_vec], dtype=numpy.int8).transpose()
 
+img_size = X_img.shape[1]
 input_matrix = numpy.append(numpy.append(X_img, X_ker, axis=1), y, axis=1)
-sols_mat = row_reduce_mod2(input_matrix, -1)
+print "DEBUG: matrices generated"
 
+print "DEBUG: row reducing matrix"
+sols_mat = row_reduce_mod2(input_matrix, -1)
+print "DEBUG: matrix row reduced"
+
+print "DEBUG: extracting results"
 delta2 = {k: [] for k in g.keys()}
 g2 = {k: [] for k in g.keys()}
 
-vs = [i for i in numpy.nonzero(sols_mat[:, -1])[0]]
-for i in vs:
+for i in [i for i in numpy.nonzero(sols_mat[:, -1])[0]]:
     # get leftmost non-zero column
     j = numpy.nonzero(sols_mat[i, :])[0][0]
-    if j < len(g_x_g_H_to_HxH_0_vecs):
-        for h, hxh in g_x_g_H_to_HxH_0_vecs[j][0].items():
+    if j < img_size:
+        for h, hxh in list(g_x_g_H_to_HxH_0_vecs())[j][0].items():
             delta2[h] = delta2[h] + [hxh] if h in delta2 else [hxh]
         #print g_x_g_H_to_HxH_0_vecs[j][0]
     else:
-        for h, cxc in H_to_dCxC_1[j - len(g_x_g_H_to_HxH_0_vecs)][0].items():
+        for h, cxc in list(H_to_dCxC_1())[j - img_size][0].items():
             g2[h] = g2[h] + [cxc] if h in g2 else [cxc]
         #print H_to_dCxC_1[j - len(g_x_g_H_to_HxH_0_vecs)]
+
+# Clean up
+del sols_mat, input_matrix, X_img, X_ker, y, delta_g_vec, HxH, CxC, dCxC
 
 print
 print DELTA + u"_2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in delta2.items()})
@@ -380,6 +395,9 @@ print u"(g " + OTIMES + " g)" + DELTA + "_2 + " + NABLA + " g^2 =", format_morph
 print
 print DELTA + " g = (g " + OTIMES + " g)" + DELTA + "_2 + " + NABLA + " g^2 : ",
 print all([vs == [] for vs in add_maps_mod_2(sum_Delta_g, Delta_g).values()])
+
+# Clean up
+del sum_Delta_g, nabla_g2, gxgDelta
 
 #--------------------------------------------#
 
@@ -425,8 +443,12 @@ phi_1 = reduce(add_maps_mod_2, [g_x_g2_Delta2, g2_x_g_Delta2, id_x_Delta_g2, Del
 print
 print PHI + u"_1 = (g " + OTIMES + " g^2 + g^2 " + OTIMES + " g) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in phi_1.items() if v})
 
+print "DEBUG: generating CxCxC"
 CxCxC = tensor(C.groups, C.groups, C.groups)
+print "DEBUG: CxCxC size ", {k: len(vs) for k, vs in CxCxC.items()}
 
+
+print "DEBUG: generating dCxCxC"
 dCxCxC = {}
 for k, vs in CxCxC.items():
     dCxCxC[k] = {}
@@ -437,9 +459,8 @@ for k, vs in CxCxC.items():
         if dLeft + dMiddle + dRight:
             dCxCxC[k][(l, m, r)] = dLeft + dMiddle + dRight
 
-
-delta3 = {}
-g3 = {}
+delta3 = {k: [] for k in g.keys()}
+g3 = {k: [] for k in g.keys()}
 
 # for k, v in g.items():
 #     dim = int(k[1])+2
@@ -456,41 +477,69 @@ g3 = {}
 # delta3 = {k: [(g_inv[l], g_inv[m], g_inv[r]) for (l, m, r) in v] for k, v in delta3.items() if v}
 
 # basis for vector space
-H_to_CxCxC_0 = [{h: cxcxc} for dim, hs in H.items() for h in hs for cxcxc in CxCxC[dim]]
+def H_to_CxCxC_1():
+    return ({h: cxcxc} for dim, hs in H.items() for h in hs for cxcxc in CxCxC[dim + 1])
 
-phi_1_vec = get_vector_in_basis(phi_1, H_to_CxCxC_0)
+print "DEBUG: generating phi_1 vector"
+phi_1_vec = get_vector_in_basis(phi_1, H_to_CxCxC_1())
 
+print "DEBUG: generating HxHxH"
 HxHxH = tensor(H, H, H)
-H_to_HxHxH_0 = [{h: hxhxh} for dim, hs in H.items() for h in hs for hxhxh in HxHxH[dim]]
-gxgxg_H_to_HxHxH_0 = [(hs, {h: [(l, m, r) for l in g[h_l] for m in g[h_m] for r in g[h_r]]
-                            for h, (h_l, h_m, h_r) in hs.items()}) for hs in H_to_HxHxH_0]
-gxgxg_H_to_HxHxH_0_vecs = [(hs, get_vector_in_basis(h_to_cxcxcs, H_to_CxCxC_0)) for (hs, h_to_cxcxcs) in gxgxg_H_to_HxHxH_0]
+print "DEBUG: HxHxH size ", {k: len(vs) for k, vs in HxHxH.items()}
+
+def H_to_HxHxH_1():
+    print "\tDEBUG: enter H_to_HxHxH_1 generator"
+    return ({h: hxhxh} for dim, hs in H.items() for h in hs for hxhxh in HxHxH[dim + 1])
+
+def gxgxg_H_to_HxHxH_1():
+    print "\tDEBUG: enter gxgxg_H_to_HxHxH_1 generator"
+    return ((hs, {h: [(l, m, r) for l in g[h_l] for m in g[h_m] for r in g[h_r]]
+                  for h, (h_l, h_m, h_r) in hs.items()}) for hs in H_to_HxHxH_1())
+
+def gxgxg_H_to_HxHxH_1_vecs():
+    print "\tDEBUG: enter gxgxg_H_to_HxHxH_1_vecs generator"
+    return ((hs, get_vector_in_basis(h_to_cxcxcs, H_to_CxCxC_1())) for (hs, h_to_cxcxcs) in gxgxg_H_to_HxHxH_1())
 
 
 # generate all components in the Hom_0(H, dCxCxC) space
-H_to_dCxCxC_1 = [({h: cxcxc}, {h: dcxcxc}) for dim, hs in H.items() for h in hs for cxcxc, dcxcxc in dCxCxC[dim+2].items() if dcxcxc]
-#print "size[(H->dCxC)] = ", len(H_to_dCxC_1)
-#print H_to_dCxC_1
-H_to_dCxCxC_1_vecs = [(hs, get_vector_in_basis(h_to_cxcxcs, H_to_CxCxC_0)) for (hs, h_to_cxcxcs) in H_to_dCxCxC_1]
+def H_to_dCxCxC_1():
+    print "\tDEBUG: enter H_to_dCxCxC_1 generator"
+    return (({h: cxcxc}, {h: dcxcxc}) for dim, hs in H.items() for h in hs for cxcxc, dcxcxc in dCxCxC[dim+2].items() if dcxcxc)
 
-X_img = numpy.array([vec for (_, vec) in gxgxg_H_to_HxHxH_0_vecs]).transpose()
-X_ker = numpy.array([vec for (_, vec) in H_to_dCxCxC_1_vecs]).transpose()
-y = numpy.array([phi_1_vec]).transpose()
-input_matrix = numpy.append(numpy.append(X_img, X_ker, axis=1), y, axis=1)
+def H_to_dCxCxC_1_vecs():
+    print "\tDEBUG: enter H_to_dCxCxC_1_vecs generator"
+    return ((hs, get_vector_in_basis(h_to_cxcxcs, H_to_CxCxC_1())) for (hs, h_to_cxcxcs) in H_to_dCxCxC_1())
+
+print "DEBUG: Generating Image (h --> CxCxC) matrix"
+X_img = numpy.array([vec for (_, vec) in gxgxg_H_to_HxHxH_1_vecs()], dtype=numpy.int8).transpose()
+img_size = X_img.shape[1]
+
+print "DEBUG: Generating Kernel (h --> CxCxC) matrix"
+#X_ker = numpy.array([vec for (_, vec) in H_to_dCxCxC_1_vecs()], dtype=numpy.int8).transpose()
+
+print "DEBUG: Generating Phi (h --> CxCxC) vector"
+y = numpy.array([phi_1_vec], dtype=numpy.int8).transpose()
+
+print "DEBUG: appending matrices"
+#input_matrix = numpy.append(numpy.append(X_img, X_ker, axis=1), y, axis=1)
+input_matrix = numpy.append(X_img, y, axis=1)
+
+print "DEBUG: Row reducing matrix"
 sols_mat = row_reduce_mod2(input_matrix, -1)
 
-vs = [i for i in numpy.nonzero(sols_mat[:, -1])[0]]
-for i in vs:
+print "DEBUG: Extracting solution"
+gxgxg_H_to_HxHxH_1_vecs_list = list(gxgxg_H_to_HxHxH_1_vecs())
+for i in [i for i in numpy.nonzero(sols_mat[:, -1])[0]]:
     # get leftmost non-zero column
     j = numpy.nonzero(sols_mat[i, :])[0][0]
     #print j
-    if j < len(gxgxg_H_to_HxHxH_0_vecs):
-        for h, hxhxh in gxgxg_H_to_HxHxH_0_vecs[j][0].items():
+    if j < img_size:
+        for h, hxhxh in gxgxg_H_to_HxHxH_1_vecs_list[j][0].items():
             delta3[h] = delta3[h] + [hxhxh] if h in delta3 else [hxhxh]
         #print g_x_g_H_to_HxH_0_vecs[i]
-    else:
-        for h, cxcxc in H_to_dCxCxC_1[j - len(gxgxg_H_to_HxHxH_0_vecs)][0].items():
-            g3[h] = g3[h] + [cxcxc] if h in g3 else [cxcxc]
+    # else:
+    #     for h, cxcxc in list(H_to_dCxCxC_1())[j - img_size][0].items():
+    #         g3[h] = g3[h] + [cxcxc] if h in g3 else [cxcxc]
         #print H_to_dCxC_1[i - len(g_x_g_H_to_HxH_0_vecs)]
 
 
@@ -500,6 +549,48 @@ print DELTA + u"_3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v
 # g^3
 print
 print u"g^3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in g3.items() if v})
+
+# Clean up
+del X_img, y, phi_1_vec, z_1, HxHxH, CxCxC, dCxCxC, input_matrix, sols_mat#, X_ker
+
+# VERIFY: phi_1 = (g x g x g) DELTA_3 + NABLA g^3
+
+# (g x g x g) Delta_3
+gxgxgDelta3 = {k: [(g_l, g_m, g_r) for l, m, r in v for g_l in g[l] for g_m in g[m] for g_r in g[r]] for k, v in delta3.items()}
+print
+print u"(g " + OTIMES + " g " + OTIMES + " g)" + DELTA + "_3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in gxgxgDelta3.items()})
+
+# NABLA g^3
+nabla_g3 = {}
+for k, vs in g3.items():
+    nabla_g3[k] = []
+    for (l, m, r) in vs:
+        dLeft   = [(l_i, m, r) for l_i in C.differential[l]] if l in C.differential else []
+        dMiddle = [(l, m_i, r) for m_i in C.differential[m]] if m in C.differential else []
+        dRight  = [(l, m, r_i) for r_i in C.differential[r]] if r in C.differential else []
+        if dLeft + dMiddle + dRight:
+            nabla_g3[k][(l, m, r)] = dLeft + dMiddle + dRight
+
+print
+print NABLA + u" g^3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in nabla_g3.items() if v})
+
+# # (g x g x g) DELTA_3 + NABLA g^3
+# sum_phi_1 = add_maps_mod_2(gxgxgDelta3, nabla_g3)
+# print
+# print u"(g " + OTIMES + " g " + OTIMES + " g)" + DELTA + "_3 + " + NABLA + " g^3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in sum_phi_1.items()})
+
+# # phi_1 = (g x g x g) DELTA_2 + NABLA g^2
+# print
+# print PHI + u"_1 = (g " + OTIMES + " g " + OTIMES + " g)" + DELTA + "_3 + " + NABLA + " g^3 : ",
+# print all([vs == [] for vs in add_maps_mod_2(sum_phi_1, phi_1).values()])
+
+# (g x g x g) DELTA_3 + NABLA g^3
+sum_nabla_g3 = add_maps_mod_2(gxgxgDelta3, phi_1)
+print
+print u"(g " + OTIMES + " g " + OTIMES + " g)" + DELTA + "_3 + " + PHI + "_1 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in sum_nabla_g3.items()})
+
+
+#--------------------------------------------#
 
 exit()
 #####################
