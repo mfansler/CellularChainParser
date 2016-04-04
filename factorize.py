@@ -8,7 +8,7 @@ def main():
 
     print "\n\nBorromean Rings"
     for k, vs in Delta_g_BR.items():
-        print k, " = ", factorize(vs)
+        print k, " = ", factorize_recursive(vs)
 
     print "\n\n3-Tuples Factoring"
     print factorize_recursive(simple_triples)
@@ -66,6 +66,26 @@ def factorize3(ts):
     return [(l, m, r) for (l, mr) in sets for (ms, rs) in mr for m in ms for r in rs]
 
 
+def deep_freeze(x):
+    type_x = type(x)
+    if type_x is list or type_x is set:
+        return frozenset([deep_freeze(el) for el in x])
+    if type_x is tuple:
+        return tuple(map(deep_freeze, x))
+
+    return x
+
+
+def deep_thaw(x):
+    type_x = type(x)
+    if type_x is list or type_x is set or type_x is frozenset:
+        return [deep_thaw(el) for el in x]
+    if type_x is tuple:
+        return tuple(map(deep_thaw, x))
+
+    return x
+
+
 def factorize_recursive(tps):
 
     if not isinstance(tps[0], tuple) or len(tps[0]) < 2:
@@ -88,21 +108,20 @@ def factorize_recursive(tps):
 
         left_collect = {l: factorize_recursive(list(r)) for l, r in left_collect.items()}
 
-        right_collect = {frozenset(r): set([]) for r in left_collect.values()}
+        right_collect = {deep_freeze(r): set([]) for r in left_collect.values()}
         for l, r in left_collect.items():
-            right_collect[frozenset(r)].symmetric_difference_update(l)
+            right_collect[deep_freeze(r)].symmetric_difference_update(l)
 
         sets = [(frozenset(l), r) for r, l in right_collect.items()]
 
         last_size = cur_size
         cur_size = len(sets)
 
-
     # flatten everything out
     if len(tps[0]) == 2:
-        return sets
+        return deep_thaw(sets)
     else:
-        return [(l,) + t for (l, r) in sets for t in r]
+        return deep_thaw([(l,) + t for (l, r) in sets for t in r])
 
 
 Delta_g_DGC = {'h1_0': [('v', 'a'), ('a', 'v')], 'h0_0': [('v', 'v')], 'h2_0': [('v', 'ab'), ('a', 'b'), ('ab', 'v')]}

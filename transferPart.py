@@ -2,20 +2,19 @@
 from subprocess import check_output, CalledProcessError
 from os import remove as rm
 
-from re import sub
-from re import compile
+from re import sub, compile
 from argparse import ArgumentParser
 
-from itertools import product
+from itertools import product, combinations
 from collections import Counter
 
 import numpy
-import scipy.sparse as sparse
-import scipy.sparse.sparsetools as sparsetools
+import scipy.sparse as sp
 
 # Local imports
 import CellChainParse
 from Coalgebra import Coalgebra
+from factorize import factorize_recursive as factorize
 
 __author__ = 'mfansler'
 temp_mat = "~transfer-temp.mat"
@@ -75,6 +74,11 @@ def tensor(*groups):
 
     return tensor_groups
 
+
+def list_mod(ls, modulus=2):
+    return [s for s, num in Counter(ls).items() if num % modulus]
+
+
 def add_maps_mod_2(a, b):
 
     res = a
@@ -103,40 +107,140 @@ def get_vector_in_basis(el, basis):
     # basis = [ {'h0_0': ['a','b','c',..,'z']}, {'h0_1': ['b', 'c', ...]}, ..., {}]
     return [1 if k in el and v in el[k] else 0 for b in basis for k, v in b.items()]
 
+
 hom_dim_re = compile('h(\d*)_')
 
 
 def hom_dim(h_element):
     return int(hom_dim_re.match(h_element).group(1))
 
+
 def row_swap(A, r1, r2):
-    tmp = numpy.copy(A[r1, :])
-    A[r1, :] = A[r2, :]
-    A[r2, :] = tmp
+
+    tmp = A.getrow(r1).copy()
+    A[r1] = A[r2]
+    A[r2] = tmp
 
 
-def row_reduce_mod2(A, augment=-1):
+def mat_mod2(A):
+
+    A.data[:] = numpy.fmod(A.data, 2)
+    return A
+
+
+def row_reduce_mod2(A, augment=0):
 
     if A.ndim != 2:
-        print A.ndim
-        raise Exception("require two dimensional matrix input")
+        raise Exception("require two dimensional matrix input, found ", A.ndim)
 
-    A = numpy.fmod(A, 2)
+    A = A.tocsr()
+    A = mat_mod2(A)
     rank = 0
-    for i in range(A.shape[1] + augment):
+    for i in range(A.shape[1] - augment):
 
-        nzs = numpy.nonzero(A[rank:, i])[0]
-        if len(nzs) > 0:
+        nzs = A.getcol(i).nonzero()[0]
+        upper_nzs = [nz for nz in nzs if nz < rank]
+        lower_nzs = [nz for nz in nzs if nz >= rank]
 
-            row_swap(A, rank, rank + nzs[0])
+        if len(lower_nzs) > 0:
 
-            for nz in nzs[1:]:
-                A[rank + nz, :] = numpy.fmod(A[rank + nz, :] + A[rank, :], 2)
-            if i > 0:
-                for nz in numpy.nonzero(A[:rank, i])[0]:
-                    A[nz, :] = numpy.fmod(A[nz, :] + A[rank, :], 2)
+            row_swap(A, rank, lower_nzs[0])
+            for nz in lower_nzs[1:]:
+                A[nz, :] = mat_mod2(A[nz, :] + A[rank, :])
+
+            if rank > 0:
+                for nz in upper_nzs:
+                    A[nz, :] = mat_mod2(A[nz, :] + A[rank, :])
+
             rank += 1
-    return A
+
+    return A, rank
+
+
+# generates all 0-n combinations of elements in the list xs
+def all_combinations(xs):
+    for i in range(len(xs) + 1):
+        for c in combinations(xs, i):
+            yield c
+    #return (c for i in range(len(xs)+1) for c in combinations(xs, i))
+
+
+# generates the function f: C -> H
+# @param C Coalgebra to map from
+# @param g map from H (== H*(C)) to class representatives in C
+#
+# returns function f(x)
+def compute_f(C, g):
+
+    # create a map from cells to index
+    basis = {el: i for (i, el) in enumerate([el for grp in C.groups.values() for el in grp])}
+
+    # store num cells
+    n = len(basis)
+
+    # prepare n x n incidence matrix
+    # includes multiple dimensions, but it's sparse, so no efficiency lost
+    inc_mat = sp.lil_matrix((n, n), dtype=numpy.int8)
+
+    # enter incidences
+    for el, bd in C.differential.items():
+        inc_mat.rows[basis[el]] = [basis[c] for c, i in bd.items() if i % 2]
+    inc_mat.data = [[1]*len(row) for row in inc_mat.rows]
+
+    # switch to cols
+    inc_mat = inc_mat.transpose()
+
+    # append identity
+    inc_mat = sp.hstack([inc_mat, sp.identity(n, dtype=numpy.int8)])
+
+    # row reduce
+    rref_mat, rank = row_reduce_mod2(inc_mat, augment=n)
+
+    # extract just the (partial) inverse
+    inv_mat = rref_mat.tocsc()[:, n:].tocsr()
+
+    # clean up
+    del inc_mat, rref_mat
+
+    # method to check if chain (typically a cycle) is in Im[boundary]
+    # zombies are components that don't get killed by boundary
+    def has_zombies(x):
+
+        # convert to vector in established basis
+        x_vec = [0]*n
+        for el in x:
+            x_vec[basis[el]] = 1
+
+        # converts vector to Im[boundary] basis
+        zombies = inv_mat.dot(numpy.array(x_vec))[rank:]
+
+        # return true if there are components not spanned by Im[boundary]
+        return numpy.fmod(zombies, 2).any()
+
+    # method to be returned
+    # cannonical map of x in C to coset in H
+    def f(x):
+
+        # check if not cycle (non-vanishing boundary)
+        bd = list_mod([dx for cell in x if cell in C.differential for dx in C.differential[cell].items()], 2)
+        if bd:
+            return []
+
+        # check if killed by known boundaries
+        if not has_zombies(x):
+            return []
+
+        # TODO: check to see if single elements are sufficient
+        # determine what combination of known cycles it corresponds to
+        for ks in all_combinations(g.keys()):
+            gens = [gen_comp for k in ks for gen_comp in g[k]]
+
+            if not has_zombies(list_mod(gens + x, 2)):
+                return list(ks)
+
+        raise Exception("Error: could not find coset!\n", x)
+
+    return f
 
 
 argparser = ArgumentParser(description="Computes induced coproduct on homology")
@@ -199,9 +303,7 @@ dims = [int(k) for k in compile('\d+').findall(lines[0])]
 H_gens = {}
 offset = 9 + len(dims)
 for n, k in enumerate(dims):
-    #print "debug: ", C.groups[n]
     H_gens[n] = [[C.groups[n][int(j)] for j in compile('\[(\d+)\]').findall(lines[offset + i])] for i in range(k)]
-    #print "debug: ", lines[offset], k
     offset += k + 1
 
 # Manually entering results from SageMath for basis for homology
@@ -218,49 +320,36 @@ g = {"h{}_{}".format(dim, i): gen for dim, gens in H_gens.items() for i, gen in 
 print
 print "g = ", format_morphism(g)
 
-# IMPORTANT: g_inv can no longer be defined
-# Define g inverse
-# g_inv = {v: k for k, v in g.items()}
-
-alpha = {}
-beta = {}
-
-# K2 = Delta
-alpha[THETA+'2'] = C.coproduct
-
-# J1 -> g
-
-beta['f1'] = g
-
-# BEGIN DEBUG
-# for k, vs in g.items():
-#     print vs, " => ", '(' + str([res for v in vs for res in C.coproduct[v].keys()]) + ')'
-#    print vs, " => ", chain_coproduct(vs, C.coproduct)
-# END DEBUG
-
-# J2: theta2 f1 -> Delta g
-beta[THETA+'2f1'] = {}
-for k, vs in g.items():
-    beta[THETA+'2f1'][k] = '(' + format_sum(chain_coproduct(vs, C.coproduct)) + ')'
+# generate f: C -> H
+f = compute_f(C, g)
 
 # define Delta g
 Delta_g = {k: chain_coproduct(v, C.coproduct) for k, v in g.items()}
 print
 print DELTA + u"g =", format_morphism(Delta_g)
 
-CxC = tensor(C.groups, C.groups)
-
-dCxC = {}
-for k, vs in CxC.items():
-    dCxC[k] = {}
-    for (l, r) in vs:
-        dLeft = [(l_i, r) for l_i in C.differential[l]] if l in C.differential else []
-        dRight = [(l, r_i) for r_i in C.differential[r]] if r in C.differential else []
-        if dLeft + dRight:
-            dCxC[k][(l, r)] = dLeft + dRight
+print
+print DELTA + u"g (unsimplified) =", {k: chain_coproduct(v, C.coproduct, simplify=False) for k, v in g.items()}
 
 
-delta2 = {k: [] for k in g.keys()}
+# CxC = tensor(C.groups, C.groups)
+#
+# dCxC = {}
+# for k, vs in CxC.items():
+#     dCxC[k] = {}
+#     for (l, r) in vs:
+#         dLeft = [(l_i, r) for l_i in C.differential[l]] if l in C.differential else []
+#         dRight = [(l, r_i) for r_i in C.differential[r]] if r in C.differential else []
+#         if dLeft + dRight:
+#             dCxC[k][(l, r)] = dLeft + dRight
+
+factored_delta_g = {k: factorize(v) for k, v in Delta_g.items()}
+print
+print DELTA + u"g (factored) =", factored_delta_g
+
+delta2 = {k: [tuple(map(f, list(t))) for t in tuples] for k, tuples in factored_delta_g.items()}
+print delta2
+exit()
 g2 = {k: [] for k in g.keys()}
 
 #print "H->dCxC = ", H_to_dCxC_1
