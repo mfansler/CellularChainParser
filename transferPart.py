@@ -5,17 +5,16 @@ from os import remove as rm
 from re import sub, compile
 from argparse import ArgumentParser
 
-from itertools import product, combinations
+from itertools import product
 from collections import Counter
 
 import numpy
-import scipy.sparse as sp
 
 # Local imports
 import CellChainParse
 from Coalgebra import Coalgebra
 from factorize import factorize_recursive as factorize
-from support_functions import compute_f, row_reduce_mod2
+from support_functions import generate_f_integral, row_reduce_mod2
 
 __author__ = 'mfansler'
 temp_mat = "~transfer-temp.mat"
@@ -36,7 +35,7 @@ def format_cells(cells):
 
 def format_tuple(t):
     if type(t) is tuple:
-        return u" \u2297 ".join(list(t))
+        return u" \u2297 ".join([format_sum(el) for el in t])
     else:
         return unicode(t)
 
@@ -44,14 +43,16 @@ def format_tuple(t):
 def format_sum(obj):
     if obj is None:
         return "0"
-    elif type(obj) is dict:
+    if type(obj) is dict:
         single = [format_tuple(k) for k, v in obj.items() if v == 1]
         multiple = [u"{}*({})".format(v, format_tuple(k)) for k, v in obj.items() if v > 1]
         return u" + ".join(single + multiple)
-    elif type(obj) is list:
+    if type(obj) is list:
+        if len(obj) == 1:
+            return format_tuple(obj[0])
         return u"(" + u" + ".join([format_tuple(o) for o in obj]) + ")"
-    else:
-        return obj
+
+    return obj
 
 
 def format_morphism(m):
@@ -156,7 +157,7 @@ scratch.close()
 
 try:
     chomp_results = check_output(["chomp-matrix", temp_mat, "-g"])
-    print chomp_results
+    #print chomp_results
 except CalledProcessError as e:
     print e.returncode
     print e.output
@@ -190,12 +191,12 @@ print
 print "g = ", format_morphism(g)
 
 # generate f: C -> H
-f = compute_f(C, g)
+f, integrate1 = generate_f_integral(C, g)
 
 # define Delta g
-Delta_g = {k: chain_coproduct(v, C.coproduct) for k, v in g.items()}
+delta_g = {k: chain_coproduct(v, C.coproduct) for k, v in g.items()}
 print
-print DELTA + u"g =", format_morphism(Delta_g)
+print DELTA + u"g =", format_morphism(delta_g)
 
 print
 print DELTA + u"g (unsimplified) =", {k: chain_coproduct(v, C.coproduct, simplify=False) for k, v in g.items()}
@@ -212,131 +213,34 @@ print DELTA + u"g (unsimplified) =", {k: chain_coproduct(v, C.coproduct, simplif
 #         if dLeft + dRight:
 #             dCxC[k][(l, r)] = dLeft + dRight
 
-factored_delta_g = {k: factorize(v) for k, v in Delta_g.items()}
+factored_delta_g = {k: factorize(v) for k, v in delta_g.items()}
 print
 print DELTA + u"g (factored) =", factored_delta_g
 
 delta2 = {k: [tuple(map(f, list(t))) for t in tuples] for k, tuples in factored_delta_g.items()}
-print delta2
-exit()
-g2 = {k: [] for k in g.keys()}
 
-#print "H->dCxC = ", H_to_dCxC_1
-# for k, v in g.items():
-#     dim = int(k[1])+1
-#     img = chain_coproduct(v, C.coproduct)
-#     g2[k] = []
-#     for chain, bd in dCxC[dim].items():
-#         if all([cell in img for cell in bd]):
-#             g2[k].append(chain)
-#             for cell in bd:
-#                 img.remove(cell)
-#     delta2[k] = img
-#
-# print
-# print DELTA + u"_2 =", format_morphism(delta2)
-# print
-# print u"g^2 =", format_morphism(g2)
-# print
-#print 'H = ', H
-
-
-# basis for vector space
-def H_to_CxC_0():
-    return ({h: cxc} for dim, hs in H.items() for h in hs for cxc in CxC[dim])
-
-# express Delta g in that basis
-delta_g_vec = get_vector_in_basis(Delta_g, H_to_CxC_0())
-
-
-# generate all possible components of Delta_2, that is Hom_0(H, HxH)
-HxH = tensor(H, H)
-
-
-def H_to_HxH_0():
-    return ({h: hxh} for dim, hs in H.items() for h in hs for hxh in HxH[dim])
-
-
-# convert all possible Delta_2 components to H -> HxH -> CxC
-# note that we are keeping the original maps associated with them so they don't get lost
-def g_x_g_H_to_HxH_0():
-    return ((hs, {h: [(l, r) for l in g[h_l] for r in g[h_r]] for h, (h_l, h_r) in hs.items()}) for hs in H_to_HxH_0())
-
-
-# express the Delta2 components in the Hom_0(H, CxC) vector space
-def g_x_g_H_to_HxH_0_vecs():
-    return ((hs, get_vector_in_basis(h_to_cxcs, H_to_CxC_0())) for (hs, h_to_cxcs) in g_x_g_H_to_HxH_0())
-
-
-# generate all components in the Hom_0(H, dCxC) space
-def H_to_dCxC_1():
-    return (({h: cxc}, {h: dcxc}) for dim, hs in H.items() for h in hs for cxc, dcxc in dCxC[dim+1].items() if dcxc)
-
-
-def H_to_dCxC_1_vecs():
-    return ((hs, get_vector_in_basis(h_to_cxcs, H_to_CxC_0())) for (hs, h_to_cxcs) in H_to_dCxC_1())
-
-#
-X_img = numpy.array([vec for (_, vec) in g_x_g_H_to_HxH_0_vecs()], dtype=numpy.int8).transpose()
-X_ker = numpy.array([vec for (_, vec) in H_to_dCxC_1_vecs()], dtype=numpy.int8).transpose()
-y = numpy.array([delta_g_vec], dtype=numpy.int8).transpose()
-
-img_size = X_img.shape[1]
-input_matrix = numpy.append(numpy.append(X_img, X_ker, axis=1), y, axis=1)
-#print input_matrix
-sols_mat = row_reduce_mod2(input_matrix, -1)
-numpy.set_printoptions(threshold=numpy.nan)
-
-
-for i in [i for i in numpy.nonzero(sols_mat[:, -1])[0]]:
-    # get leftmost non-zero column
-    j = numpy.nonzero(sols_mat[i, :])[0][0]
-    #print j
-    if j < img_size:
-        for h, hxh in list(g_x_g_H_to_HxH_0_vecs())[j][0].items():
-            delta2[h] = delta2[h] + [hxh] if h in delta2 else [hxh]
-        #print g_x_g_H_to_HxH_0_vecs[i]
-    else:
-        for h, cxc in list(H_to_dCxC_1())[j - img_size][0].items():
-            g2[h] = g2[h] + [cxc] if h in g2 else [cxc]
-        #print H_to_dCxC_1[i - len(g_x_g_H_to_HxH_0_vecs)]
-
+# flatten delta2 and remove up empty elements
+delta2 = {k: [(l, r) for (ls, rs) in tps for l in ls for r in rs]for k, tps in delta2.items()}
 print
 print DELTA + u"_2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in delta2.items()})
 
-# g^2
-print
-print u"g^2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in g2.items() if v})
-
-# (g x g) Delta
+# (g x g) Delta2
 gxgDelta = {k: [(g_l, g_r) for l, r in v for g_l in g[l] for g_r in g[r]] for k, v in delta2.items()}
 print
 print u"(g " + OTIMES + " g)" + DELTA + "_2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in gxgDelta.items()})
 
+# nabla g^2
+nabla_g2 = add_maps_mod_2(gxgDelta, delta_g)
+print
+print NABLA + u" g^2 = (g " + OTIMES + " g)" + DELTA + "_2 + " + DELTA + "g =", format_morphism({k: [format_tuple(t) for t in v] for k, v in nabla_g2.items() if v})
+
+
+# g^2
+g2 = {k: [(anti_l, r) for anti_l in integrate1(l)] + [(l, anti_r) for anti_r in integrate1(r)] for k, vs in nabla_g2.items() for (l, r) in vs}
+print
+print u"g^2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in g2.items() if v})
+exit()
 # VERIFY: DELTA g = (g x g) DELTA_2 + NABLA g^2
-
-# NABLA g^2
-nabla_g2 = {}
-for k, vs in g2.items():
-    nabla_g2[k] = []
-    for (l, r) in vs:
-        dLeft = [(l_i, r) for l_i in C.differential[l]] if l in C.differential else []
-        dRight = [(l, r_i) for r_i in C.differential[r]] if r in C.differential else []
-        if dLeft + dRight:
-            nabla_g2[k] += dLeft + dRight
-
-print
-print NABLA + u" g^2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in nabla_g2.items() if v})
-
-# (g x g) DELTA_2 + NABLA g^2
-sum_Delta_g = add_maps_mod_2(gxgDelta, nabla_g2)
-print
-print u"(g " + OTIMES + " g)" + DELTA + "_2 + " + NABLA + " g^2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in sum_Delta_g.items()})
-
-# Delta g = (g x g) DELTA_2 + NABLA g^2
-print
-print DELTA + " g = (g " + OTIMES + " g)" + DELTA + "_2 + " + NABLA + " g^2 : ",
-print all([vs == [] for vs in add_maps_mod_2(sum_Delta_g, Delta_g).values()])
 
 #--------------------------------------------#
 
