@@ -15,6 +15,7 @@ import scipy.sparse as sp
 import CellChainParse
 from Coalgebra import Coalgebra
 from factorize import factorize_recursive as factorize
+from support_functions import compute_f, row_reduce_mod2
 
 __author__ = 'mfansler'
 temp_mat = "~transfer-temp.mat"
@@ -75,10 +76,6 @@ def tensor(*groups):
     return tensor_groups
 
 
-def list_mod(ls, modulus=2):
-    return [s for s, num in Counter(ls).items() if num % modulus]
-
-
 def add_maps_mod_2(a, b):
 
     res = a
@@ -113,134 +110,6 @@ hom_dim_re = compile('h(\d*)_')
 
 def hom_dim(h_element):
     return int(hom_dim_re.match(h_element).group(1))
-
-
-def row_swap(A, r1, r2):
-
-    tmp = A.getrow(r1).copy()
-    A[r1] = A[r2]
-    A[r2] = tmp
-
-
-def mat_mod2(A):
-
-    A.data[:] = numpy.fmod(A.data, 2)
-    return A
-
-
-def row_reduce_mod2(A, augment=0):
-
-    if A.ndim != 2:
-        raise Exception("require two dimensional matrix input, found ", A.ndim)
-
-    A = A.tocsr()
-    A = mat_mod2(A)
-    rank = 0
-    for i in range(A.shape[1] - augment):
-
-        nzs = A.getcol(i).nonzero()[0]
-        upper_nzs = [nz for nz in nzs if nz < rank]
-        lower_nzs = [nz for nz in nzs if nz >= rank]
-
-        if len(lower_nzs) > 0:
-
-            row_swap(A, rank, lower_nzs[0])
-            for nz in lower_nzs[1:]:
-                A[nz, :] = mat_mod2(A[nz, :] + A[rank, :])
-
-            if rank > 0:
-                for nz in upper_nzs:
-                    A[nz, :] = mat_mod2(A[nz, :] + A[rank, :])
-
-            rank += 1
-
-    return A, rank
-
-
-# generates all 0-n combinations of elements in the list xs
-def all_combinations(xs):
-    for i in range(len(xs) + 1):
-        for c in combinations(xs, i):
-            yield c
-    #return (c for i in range(len(xs)+1) for c in combinations(xs, i))
-
-
-# generates the function f: C -> H
-# @param C Coalgebra to map from
-# @param g map from H (== H*(C)) to class representatives in C
-#
-# returns function f(x)
-def compute_f(C, g):
-
-    # create a map from cells to index
-    basis = {el: i for (i, el) in enumerate([el for grp in C.groups.values() for el in grp])}
-
-    # store num cells
-    n = len(basis)
-
-    # prepare n x n incidence matrix
-    # includes multiple dimensions, but it's sparse, so no efficiency lost
-    inc_mat = sp.lil_matrix((n, n), dtype=numpy.int8)
-
-    # enter incidences
-    for el, bd in C.differential.items():
-        inc_mat.rows[basis[el]] = [basis[c] for c, i in bd.items() if i % 2]
-    inc_mat.data = [[1]*len(row) for row in inc_mat.rows]
-
-    # switch to cols
-    inc_mat = inc_mat.transpose()
-
-    # append identity
-    inc_mat = sp.hstack([inc_mat, sp.identity(n, dtype=numpy.int8)])
-
-    # row reduce
-    rref_mat, rank = row_reduce_mod2(inc_mat, augment=n)
-
-    # extract just the (partial) inverse
-    inv_mat = rref_mat.tocsc()[:, n:].tocsr()
-
-    # clean up
-    del inc_mat, rref_mat
-
-    # method to check if chain (typically a cycle) is in Im[boundary]
-    # zombies are components that don't get killed by boundary
-    def has_zombies(x):
-
-        # convert to vector in established basis
-        x_vec = [0]*n
-        for el in x:
-            x_vec[basis[el]] = 1
-
-        # converts vector to Im[boundary] basis
-        zombies = inv_mat.dot(numpy.array(x_vec))[rank:]
-
-        # return true if there are components not spanned by Im[boundary]
-        return numpy.fmod(zombies, 2).any()
-
-    # method to be returned
-    # cannonical map of x in C to coset in H
-    def f(x):
-
-        # check if not cycle (non-vanishing boundary)
-        bd = list_mod([dx for cell in x if cell in C.differential for dx in C.differential[cell].items()], 2)
-        if bd:
-            return []
-
-        # check if killed by known boundaries
-        if not has_zombies(x):
-            return []
-
-        # TODO: check to see if single elements are sufficient
-        # determine what combination of known cycles it corresponds to
-        for ks in all_combinations(g.keys()):
-            gens = [gen_comp for k in ks for gen_comp in g[k]]
-
-            if not has_zombies(list_mod(gens + x, 2)):
-                return list(ks)
-
-        raise Exception("Error: could not find coset!\n", x)
-
-    return f
 
 
 argparser = ArgumentParser(description="Computes induced coproduct on homology")
