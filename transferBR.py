@@ -1,7 +1,4 @@
 # Standard imports
-from subprocess import check_output, CalledProcessError
-from os import remove as rm
-
 from re import sub
 from re import compile
 from argparse import ArgumentParser
@@ -10,7 +7,6 @@ from itertools import product
 from collections import Counter
 
 import numpy
-from scipy import linalg
 
 import sys
 import codecs
@@ -19,6 +15,8 @@ sys.stdout=codecs.getwriter('utf-8')(sys.stdout)
 # Local imports
 import CellChainParse
 from Coalgebra import Coalgebra
+from factorize import factorize_recursive as factorize
+from support_functions import generate_f_integral, row_reduce_mod2, add_maps_mod_2, derivative, expand_tuple_list, list_mod
 
 __author__ = 'mfansler'
 temp_mat = "~transfer-temp.mat"
@@ -82,33 +80,11 @@ def tensor(*groups):
     return tensor_groups
 
 
-def add_maps_mod_2(a, b):
-
-    res = a
-    for k, vals in b.items():
-        if k not in res:
-            res[k] = vals
-        else:
-            for v in vals:
-                if v in res[k]:
-                    res[k] = [u for u in res[k] if u != v]
-                else:
-                    res[k].append(v)
-
-    return res
-
-
 def chain_coproduct(chain, coproduct, simplify=True):
 
     ps = [p for cell in chain for p, num in coproduct[cell].items() if num % 2]
     return [el for el, num in Counter(ps).items() if num % 2] if simplify else ps
 
-
-def get_vector_in_basis(el, basis):
-
-    # el = [{}, {}]
-    # basis = [ {'h0_0': ['a','b','c',..,'z']}, {'h0_1': ['b', 'c', ...]}, ..., {}]
-    return [1 if k in el and v in el[k] else 0 for b in basis for k, v in b.items()]
 
 hom_dim_re = compile('h(\d*)_')
 
@@ -116,34 +92,6 @@ hom_dim_re = compile('h(\d*)_')
 def hom_dim(h_element):
     return int(hom_dim_re.match(h_element).group(1))
 
-def row_swap(A, r1, r2):
-    tmp = numpy.copy(A[r1, :])
-    A[r1, :] = A[r2, :]
-    A[r2, :] = tmp
-
-
-def row_reduce_mod2(A, augment=-1):
-
-    if A.ndim != 2:
-        print A.ndim
-        raise Exception("require two dimensional matrix input")
-
-    A = numpy.fmod(A, 2)
-    rank = 0
-    for i in range(A.shape[1] + augment):
-
-        nzs = numpy.nonzero(A[rank:, i])[0]
-        if len(nzs) > 0:
-
-            row_swap(A, rank, rank + nzs[0])
-
-            for nz in nzs[1:]:
-                A[rank + nz, :] = numpy.fmod(A[rank + nz, :] + A[rank, :], 2)
-            if i > 0:
-                for nz in numpy.nonzero(A[:rank, i])[0]:
-                    A[nz, :] = numpy.fmod(A[nz, :] + A[rank, :], 2)
-            rank += 1
-    return A
 
 def differential2_space(AxA, diff_op):
 
@@ -189,39 +137,7 @@ COMPUTE HOMOLOGY
 
 differential = {n: C.incidence_matrix(n, sparse=False) for n in range(1, C.topDimension() + 1)}
 
-# create temporary file for CHomP
-# scratch = open(temp_mat, 'w+')
-#
-# for n, entries in differential.iteritems():
-#     print >> scratch, n - 1
-#     incidences = [(l, r, v % 2) for (l, r), v in entries.iteritems()]
-#     for entry in ["{} {} {}".format(l, r, v) for (l, r, v) in sorted(incidences, cmp=compare_incidences)]:
-#         print >> scratch, entry
-#
-# scratch.close()
-#
-# try:
-#     chomp_results = check_output(["chomp-matrix", temp_mat, "-g"])
-#     print chomp_results
-# except CalledProcessError as e:
-#     print e.returncode
-#     print e.output
-#     print e.output
-# finally:
-#     rm(temp_mat)  # clean up
-#
-# lines = chomp_results.splitlines()
-#
-# dims = [int(k) for k in compile('\d+').findall(lines[0])]
-
-
 H_gens = {}
-# offset = 9 + len(dims)
-# for n, k in enumerate(dims):
-#     #print "debug: ", C.groups[n]
-#     H_gens[n] = [[C.groups[n][int(j)] for j in compile('\[(\d+)\]').findall(lines[offset + i])] for i in range(k)]
-#     #print "debug: ", lines[offset], k
-#     offset += k + 1
 
 # Manually entering results from SageMath for basis for homology
 H_gens[0] = [['v_{1}']]
@@ -237,33 +153,81 @@ g = {"h{}_{}".format(dim, i): gen for dim, gens in H_gens.items() for i, gen in 
 print
 print "g = ", format_morphism(g)
 
-# IMPORTANT: is there a general way to define g_inv???
-# Define g inverse
-# g_inv = {v: k for k, v in g.items()}
-
-alpha = {}
-beta = {}
-
-# K2 = Delta
-alpha[THETA+'2'] = C.coproduct
-
-# J1 -> g
-
-beta['f1'] = g
+# generate f: C -> H
+f, integrate = generate_f_integral(C, g)
 
 # define Delta g
-Delta_g = {k: chain_coproduct(v, C.coproduct) for k, v in g.items()}
+delta_g = {k: chain_coproduct(v, C.coproduct) for k, v in g.items()}
 print
-print DELTA + u"g =", format_morphism(Delta_g)
+print DELTA + u"g =", format_morphism(delta_g)
 
-# J2: theta2 f1 -> Delta g
-beta[THETA+'2f1'] = Delta_g
+print
+print DELTA + u"g (unsimplified) =", {k: chain_coproduct(v, C.coproduct, simplify=False) for k, v in g.items()}
+
+factored_delta_g = {k: factorize(v) for k, v in delta_g.items()}
+print
+print DELTA + u"g (factored) =", factored_delta_g
+
+delta2 = {k: [tuple(map(f, list(t))) for t in tuples] for k, tuples in factored_delta_g.items()}
+
+# flatten delta2 and remove up empty elements
+delta2 = {k: [tp_i for tp in tps for tp_i in expand_tuple_list(tp)]for k, tps in delta2.items()}
+print
+print DELTA + u"_2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in delta2.items()})
+
+# (g x g) Delta2
+gxgDelta = {k: [(g_l, g_r) for l, r in v for g_l in g[l] for g_r in g[r]] for k, v in delta2.items()}
+print
+print u"(g " + OTIMES + " g)" + DELTA + "_2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in gxgDelta.items()})
+
+# nabla g^2
+nabla_g2 = add_maps_mod_2(gxgDelta, delta_g)
+print
+print u"(g " + OTIMES + " g)" + DELTA + "_2 + " + DELTA + "g =", format_morphism({k: [format_tuple(t) for t in v] for k, v in nabla_g2.items() if v})
+
+# factored_nabla_g2 = {k: factorize(v) for k, v in nabla_g2.items() if v}
+# print
+# print u"(g " + OTIMES + " g)" + DELTA + "_2 + " + DELTA + "g (factored) =", factored_nabla_g2
+
+# g^2
+g2 = {k: integrate(vs) for k, vs in nabla_g2.items()}
+g2 = {k: [tp_i for tp in tps for tp_i in expand_tuple_list(tp)]for k, tps in g2.items() if tps}
+print
+print u"g^2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in g2.items() if v})
+
+nabla_g2_computed = {k: [exp_tp for (l, r) in derivative(v, C) for exp_tp in expand_tuple_list((l, r)) if l and r] for k, v in g2.items() if v}
+nabla_g2_computed = {k: list_mod(vs, modulus=2) for k, vs in nabla_g2_computed.items()}
+print
+print NABLA + u" g^2 =", format_morphism(nabla_g2_computed)
+
+# VERIFY: DELTA g = (g x g) DELTA_2 + NABLA g^2
+
+print
+print u"(g " + OTIMES + " g)" + DELTA + "_2 + " + DELTA + "g + " + NABLA + "g^2 = 0 ? ",
+print "FALSE!" if any(add_maps_mod_2(nabla_g2_computed, nabla_g2).values()) else "TRUE!"
+
+# -------------------------------------------- #
+exit()
 
 # CxC
 CxC = tensor(C.groups, C.groups)
 
 # dCxC
 dCxC = differential2_space(CxC, C.differential)
+
+# d(Delta g)
+d_Delta_g = {k: [] for k in g.keys()}
+for k, vs in Delta_g.items():
+
+    for (l, r) in vs:
+        dLeft = [(l_i, r) for l_i in C.differential[l]] if l in C.differential else []
+        dRight = [(l, r_i) for r_i in C.differential[r]] if r in C.differential else []
+        if dLeft + dRight:
+            d_Delta_g[k] += dLeft + dRight
+
+d_Delta_g = {k: list_mod(v, 2) for k, v in d_Delta_g.items()}
+print u"d" + DELTA + u"g =", format_morphism(d_Delta_g)
+print Delta_g
 
 # for k, vs in CxC.items():
 #     dCxC[k] = {}
@@ -361,7 +325,8 @@ del sols_mat, input_matrix, X_img, X_ker, y, delta_g_vec, HxH, CxC, dCxC
 
 print
 print DELTA + u"_2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in delta2.items()})
-
+print DELTA
+exit()
 # g^2
 print
 print u"g^2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in g2.items() if v})

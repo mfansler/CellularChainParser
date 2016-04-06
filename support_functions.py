@@ -5,13 +5,18 @@ from collections import Counter
 from itertools import combinations
 
 from Coalgebra import Coalgebra
-from factorize import deep_freeze, deep_thaw
+from factorize import factorize_recursive as factorize
 
 __author__ = 'mfansler'
 
 
 def expand_tuple_list(tp):
-    return reduce(lambda acc, tp_comp: [x + (y,) for x in acc for y in tp_comp], tp, [tuple()])
+    def expand_tuple_helper(acc, tp_comp):
+        if type(tp_comp) is list:
+            return [x + (y,) for x in acc for y in tp_comp]
+        return [x + (tp_comp,) for x in acc]
+
+    return reduce(expand_tuple_helper, tp, [tuple()])
 
 
 def add_maps_mod_2(a, b):
@@ -179,13 +184,15 @@ def generate_f_integral(C, g):
 
     def integrate1(x):
 
+        if type(x) is not list:
+            x = [x]
         # convert to vector in established basis
         x_vec = [0]*n
         for el in x:
             x_vec[basis[el]] = 1
 
         # converts vector to Im[boundary] basis
-        x_ker = inv_mat.dot(numpy.array(x_vec))
+        x_ker = inv_mat.dot(numpy.array(x_vec)) % 2
 
         if any(x_ker[rank:]):
             return None
@@ -214,6 +221,12 @@ def generate_f_integral(C, g):
         if type(xs[0]) is not tuple:
             return integrate1(xs)
 
+        if type(xs[0][0]) is list:
+            expanded_xs = [tp for x in xs for tp in expand_tuple_list(x)]
+        else:
+            expanded_xs = xs
+            xs = factorize(xs)
+
         # otherwise, we now have a none empty list of tuples
         # figure out which component in the first tuple can be integrated
         for i, x_cmp in enumerate(xs[0]):
@@ -234,7 +247,7 @@ def generate_f_integral(C, g):
                 anti_x = expand_tuple_list(anti_x)
                 # take the derivative of that anti-derivative and subtract from our list
                 anti_x_full_derivative = [dx_tp for dx in derivative(anti_x, C) for dx_tp in expand_tuple_list(dx) if all(dx)]
-                remainder = list_mod(anti_x_full_derivative + xs, 2)
+                remainder = list_mod(anti_x_full_derivative + expanded_xs, 2)
 
                 # attempt to integrate that remaining portion on its own
                 anti_rem = integrate(remainder)
@@ -330,6 +343,8 @@ def main():
     print "d( m11 ) = ", derivative('m_{11}', BR_C)
     print "d( (m_4, m_11) ) = ", derivative(('m_{4}', 'm_{11}'), BR_C)
     print "d( (m_4, m_11, v10) ) = ", derivative(('m_{4}', 'm_{11}', 'v_{10}'), BR_C)
+
+    print "integrate((m_{4} + m{11}) x (v_{1} + v_{2})) = ", integrate_BR([(['m_{11}', 'm_{4}'], ['v_{2}', 'v_{1}'])])
 
 
 if __name__ == '__main__':
