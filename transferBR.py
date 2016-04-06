@@ -15,8 +15,7 @@ sys.stdout=codecs.getwriter('utf-8')(sys.stdout)
 # Local imports
 import CellChainParse
 from Coalgebra import Coalgebra
-from factorize import factorize_recursive as factorize
-from factorize import expand_tuple_list
+from factorize import expand_tuple_list, factorize
 from support_functions import generate_f_integral, row_reduce_mod2, add_maps_mod_2, derivative, list_mod
 
 __author__ = 'mfansler'
@@ -249,16 +248,29 @@ print u"z_1 = (1 " + OTIMES + " " + DELTA + "_2 + " + DELTA + "_2 " + OTIMES + "
 # phi_1 = (1 x Delta + Delta x 1) g^2 + (g x g^2 + g^2 x g) Delta_2
 phi_1 = reduce(add_maps_mod_2, [g_x_g2_Delta2, g2_x_g_Delta2, id_x_Delta_g2, Delta_x_id_g2], {})
 print
-print PHI + u"_1 = (g " + OTIMES + " g^2 + g^2 " + OTIMES + " g) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in phi_1.items() if v})
+print PHI + u"_1 = (g " + OTIMES + " g^2 + g^2 " + OTIMES + " g) " + DELTA + "_2 +",
+print "(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) g^2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in phi_1.items() if v})
+
+print "RAW PHI1 = "
+print phi_1
 
 # factor phi_1
 factored_phi_1 = {k: factorize(v) for k, v in phi_1.items() if v}
+
+
+def flat_list(xss):
+    if type(xss) is list and len(xss) > 0 and type(xss[0]) is list:
+        return [x for xs in xss for x in xs]
+    return xss
+
+factored_phi_1 = {k: [tuple(map(flat_list, list(tp))) for tp in tps] for k, tps in factored_phi_1.items()}
+
 print
 print PHI + u"_1 (factored) =", factored_phi_1
 
 delta3 = {k: [tuple(map(f, list(t))) for t in tuples] for k, tuples in factored_phi_1.items()}
 
-# flatten delta2 and remove up empty elements
+# flatten delta3 and remove up empty elements
 delta3 = {k: [tp_i for tp in tps for tp_i in expand_tuple_list(tp)]for k, tps in delta3.items()}
 print
 print DELTA + u"_3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in delta3.items()})
