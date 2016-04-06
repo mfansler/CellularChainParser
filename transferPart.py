@@ -14,7 +14,7 @@ import numpy
 import CellChainParse
 from Coalgebra import Coalgebra
 from factorize import factorize_recursive as factorize
-from support_functions import generate_f_integral, row_reduce_mod2
+from support_functions import generate_f_integral, row_reduce_mod2, add_maps_mod_2
 
 __author__ = 'mfansler'
 temp_mat = "~transfer-temp.mat"
@@ -75,22 +75,6 @@ def tensor(*groups):
         tensor_groups[sum(combin)] += product(*[groups[i][combin[i]] for i in range(len(groups))])
 
     return tensor_groups
-
-
-def add_maps_mod_2(a, b):
-
-    res = a
-    for k, vals in b.items():
-        if k not in res:
-            res[k] = vals
-        else:
-            for v in vals:
-                if v in res[k]:
-                    res[k] = [u for u in res[k] if u != v]
-                else:
-                    res[k].append(v)
-
-    return res
 
 
 def chain_coproduct(chain, coproduct, simplify=True):
@@ -191,7 +175,7 @@ print
 print "g = ", format_morphism(g)
 
 # generate f: C -> H
-f, integrate1 = generate_f_integral(C, g)
+f, integrate = generate_f_integral(C, g)
 
 # define Delta g
 delta_g = {k: chain_coproduct(v, C.coproduct) for k, v in g.items()}
@@ -234,9 +218,12 @@ nabla_g2 = add_maps_mod_2(gxgDelta, delta_g)
 print
 print NABLA + u" g^2 = (g " + OTIMES + " g)" + DELTA + "_2 + " + DELTA + "g =", format_morphism({k: [format_tuple(t) for t in v] for k, v in nabla_g2.items() if v})
 
+# factor nabla_g2 to make integration more efficient
+#factored_nabla_g2 = {k: factorize(v) for k, v in nabla_g2.items()}
+
 
 # g^2
-g2 = {k: [(anti_l, r) for anti_l in integrate1(l)] + [(l, anti_r) for anti_r in integrate1(r)] for k, vs in nabla_g2.items() for (l, r) in vs}
+g2 = {k: integrate(vs) for k, vs in nabla_g2.items()}
 print
 print u"g^2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in g2.items() if v})
 exit()
