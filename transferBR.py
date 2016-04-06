@@ -16,7 +16,8 @@ sys.stdout=codecs.getwriter('utf-8')(sys.stdout)
 import CellChainParse
 from Coalgebra import Coalgebra
 from factorize import factorize_recursive as factorize
-from support_functions import generate_f_integral, row_reduce_mod2, add_maps_mod_2, derivative, expand_tuple_list, list_mod
+from factorize import expand_tuple_list
+from support_functions import generate_f_integral, row_reduce_mod2, add_maps_mod_2, derivative, list_mod
 
 __author__ = 'mfansler'
 temp_mat = "~transfer-temp.mat"
@@ -191,7 +192,7 @@ print u"(g " + OTIMES + " g)" + DELTA + "_2 + " + DELTA + "g =", format_morphism
 
 # g^2
 g2 = {k: integrate(vs) for k, vs in nabla_g2.items()}
-g2 = {k: [tp_i for tp in tps for tp_i in expand_tuple_list(tp)]for k, tps in g2.items() if tps}
+g2 = {k: [tp_i for tp in tps for tp_i in expand_tuple_list(tp)]for k, tps in g2.items()}
 print
 print u"g^2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in g2.items() if v})
 
@@ -207,6 +208,86 @@ print u"(g " + OTIMES + " g)" + DELTA + "_2 + " + DELTA + "g + " + NABLA + "g^2 
 print "FALSE!" if any(add_maps_mod_2(nabla_g2_computed, nabla_g2).values()) else "TRUE!"
 
 # -------------------------------------------- #
+
+
+
+# (1 x Delta) g^2
+id_x_Delta_g2 = {k: [(l,) + r_cp for (l, r) in v for r_cp in C.coproduct[r].keys()] for k, v in g2.items()}
+print
+print u"(1 " + OTIMES + " " + DELTA + ") g^2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta_g2.items() if v})
+
+# (Delta x 1) g^2
+Delta_x_id_g2 = {k: [l_cp + (r,) for (l, r) in v for l_cp in C.coproduct[l].keys()] for k, v in g2.items()}
+print
+print u"(" + DELTA + " " + OTIMES + " 1) g^2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in Delta_x_id_g2.items() if v})
+
+# (g x g^2) Delta_2
+g_x_g2_Delta2 = {k: [(l_cp,) + t for l, r in v for t in g2[r] for l_cp in g[l]] for k, v in delta2.items()}
+print
+print u"( g " + OTIMES + " g^2 ) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g_x_g2_Delta2.items() if v})
+
+# (g^2 x g) Delta_2
+g2_x_g_Delta2 = {k: [t + (r_cp,) for l, r in v for t in g2[l] for r_cp in g[r]] for k, v in delta2.items()}
+print
+print u"( g^2 " + OTIMES + " g ) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g2_x_g_Delta2.items() if v})
+
+# (1 x Delta_2) Delta_2
+id_x_Delta2_Delta2 = {k: [(l,) + r_cp for (l, r) in v for r_cp in delta2[r]] for k, v in delta2.items()}
+print
+print u"(1 " + OTIMES + " " + DELTA + "_2) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta2_Delta2.items() if v})
+
+# (Delta_2 x 1) Delta_2
+Delta2_x_id_Delta2 = {k: [l_cp + (r,) for (l, r) in v for l_cp in delta2[l]] for k, v in delta2.items()}
+print
+print u"(" + DELTA + "_2 " + OTIMES + " 1) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in Delta2_x_id_Delta2.items() if v})
+
+# z_1 = (1 x Delta_2 + Delta_2 x 1) Delta_2
+z_1 = add_maps_mod_2(id_x_Delta2_Delta2, Delta2_x_id_Delta2)
+print
+print u"z_1 = (1 " + OTIMES + " " + DELTA + "_2 + " + DELTA + "_2 " + OTIMES + " 1) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in z_1.items() if v})
+
+# phi_1 = (1 x Delta + Delta x 1) g^2 + (g x g^2 + g^2 x g) Delta_2
+phi_1 = reduce(add_maps_mod_2, [g_x_g2_Delta2, g2_x_g_Delta2, id_x_Delta_g2, Delta_x_id_g2], {})
+print
+print PHI + u"_1 = (g " + OTIMES + " g^2 + g^2 " + OTIMES + " g) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in phi_1.items() if v})
+
+# factor phi_1
+factored_phi_1 = {k: factorize(v) for k, v in phi_1.items() if v}
+print
+print PHI + u"_1 (factored) =", factored_phi_1
+
+delta3 = {k: [tuple(map(f, list(t))) for t in tuples] for k, tuples in factored_phi_1.items()}
+
+# flatten delta2 and remove up empty elements
+delta3 = {k: [tp_i for tp in tps for tp_i in expand_tuple_list(tp)]for k, tps in delta3.items()}
+print
+print DELTA + u"_3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in delta3.items()})
+
+# (g x g x g) Delta3
+gxgxg_delta3 = {k: [(g_l, g_m, g_r) for l, m, r in v for g_l in g[l] for g_m in g[m] for g_r in g[r]] for k, v in delta3.items()}
+print
+print u"(g " + OTIMES + " g " + OTIMES + " g)" + DELTA + "_3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in gxgxg_delta3.items()})
+
+# nabla g^3
+nabla_g3 = add_maps_mod_2(gxgxg_delta3, phi_1)
+print
+print u"(g " + OTIMES + " g " + OTIMES + " g)" + DELTA + "_3 + " + PHI + "_1 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in nabla_g3.items() if v})
+
+# g^3
+g3 = {k: integrate(vs) for k, vs in nabla_g3.items()}
+g3 = {k: [tp_i for tp in tps for tp_i in expand_tuple_list(tp)]for k, tps in g3.items() if tps}
+print
+print u"g^3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in g3.items() if v})
+
+print
+print NABLA + u" g^3 =", format_morphism({k: [(l, m, r) for (l, m, r) in derivative(v, C) if l and m and r] for k, v in g3.items() if v})
+
+nabla_g3_computed = {k: [exp_tp for (l, m, r) in derivative(v, C) for exp_tp in expand_tuple_list((l, m, r)) if l and m and r] for k, v in g3.items() if v}
+nabla_g3_computed = {k: list_mod(vs, modulus=2) for k, vs in nabla_g3_computed.items()}
+print
+print NABLA + u" g^3 =", format_morphism(nabla_g3_computed)
+
+
 exit()
 
 # CxC

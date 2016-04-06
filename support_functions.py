@@ -6,17 +6,10 @@ from itertools import combinations
 
 from Coalgebra import Coalgebra
 from factorize import factorize_recursive as factorize
+from factorize import expand_tuple_list
 
 __author__ = 'mfansler'
 
-
-def expand_tuple_list(tp):
-    def expand_tuple_helper(acc, tp_comp):
-        if type(tp_comp) is list:
-            return [x + (y,) for x in acc for y in tp_comp]
-        return [x + (tp_comp,) for x in acc]
-
-    return reduce(expand_tuple_helper, tp, [tuple()])
 
 
 def add_maps_mod_2(a, b):

@@ -1,5 +1,14 @@
 
 
+def expand_tuple_list(tp):
+    def expand_tuple_helper(acc, tp_comp):
+        if type(tp_comp) is list:
+            return [x + (y,) for x in acc for y in tp_comp]
+        return [x + (tp_comp,) for x in acc]
+
+    return reduce(expand_tuple_helper, tp, [tuple()])
+
+
 def factorize(ts):
     sets = [(frozenset([l]), frozenset([r])) for (l, r) in ts]
 
@@ -72,6 +81,15 @@ def deep_thaw(x):
     return x
 
 
+def unnest(ls):
+    if type(ls) is list:
+        if len(ls) == 1:
+            return unnest(ls[0])
+        return ls
+
+    return [ls]
+
+
 def factorize_recursive(tps):
 
     if not isinstance(tps[0], tuple) or len(tps[0]) < 2:
@@ -107,7 +125,9 @@ def factorize_recursive(tps):
     if len(tps[0]) == 2:
         return deep_thaw(sets)
     else:
-        return deep_thaw([(l,) + t for (l, r) in sets for t in r])
+        sets = deep_thaw([(l, ) + tuple(t) for (l, r) in sets for t in r])
+        sets = [tuple([unnest(ls) for ls in tp]) for tp in sets]
+        return sets
 
 
 def main():
@@ -147,6 +167,12 @@ def main():
 
     print "\n\n3-Tuples Factoring"
     print factorize_recursive(simple_triples)
+
+    print "\n\n4-Tuple Factoring"
+    print factorize_recursive([(1,3,5,7), (2,3,5,7), (1,4,5,7), (2,4,5,7),
+                              (1,3,6,7), (2,3,6,7), (1,4,6,7), (2,4,6,7),
+                               (1,3,5,8), (2,3,5,8), (1,4,5,8), (2,4,5,8),
+                              (1,3,6,8), (2,3,6,8), (1,4,6,8), (2,4,6,8),])
 
 
 if __name__ == '__main__':
