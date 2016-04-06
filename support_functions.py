@@ -5,8 +5,28 @@ from collections import Counter
 from itertools import combinations
 
 from Coalgebra import Coalgebra
+from factorize import deep_freeze, deep_thaw
 
 __author__ = 'mfansler'
+
+
+def expand_tuple_list(tp):
+    return reduce(lambda acc, tp_comp: [x + (y,) for x in acc for y in tp_comp], tp, [tuple()])
+
+
+def add_maps_mod_2(a, b):
+
+    res = a
+    for k, vals in b.items():
+        if k not in res:
+            res[k] = vals
+        else:
+            for v in vals:
+                if v in res[k]:
+                    res[k] = [u for u in res[k] if u != v]
+                else:
+                    res[k].append(v)
+    return res
 
 
 def row_swap(A, r1, r2):
@@ -53,6 +73,17 @@ def row_reduce_mod2(A, augment=0):
 
 def list_mod(ls, modulus=2):
     return [s for s, num in Counter(ls).items() if num % modulus]
+
+
+def derivative(x, C):
+    if type(x) is list:
+        return [dy for y in x for dy in derivative(y, C)]
+    if type(x) is tuple:
+        return [tuple(x[:i]) + (derivative(x[i], C), ) + tuple(x[i + 1:]) for i in range(len(x))]
+    if x in C.differential:
+        return [k for k, v in C.differential[x].items() if v % 2]
+
+    return []
 
 
 # generates all 0-n combinations of elements in the list xs
@@ -146,7 +177,6 @@ def generate_f_integral(C, g):
 
         raise Exception("Error: could not find coset!\n", x)
 
-
     def integrate1(x):
 
         # convert to vector in established basis
@@ -158,16 +188,75 @@ def generate_f_integral(C, g):
         x_ker = inv_mat.dot(numpy.array(x_vec))
 
         if any(x_ker[rank:]):
-            print "WARNING: Invalid integral!"
-            print x, "contains non-vanishing component (cycle)"
+            return None
+            # print "WARNING: Invalid integral!"
+            # print x, "contains non-vanishing component (cycle)"
 
         # returns boundary cells that contain x as boundary
         return [b for (b, v) in zip(ker_basis, x_ker[:rank]) if v % 2]
 
-    return f, integrate1
+    def integrate(xs):
+
+        # if a single tuple is passed, treat it as a list
+        if type(xs) is tuple:
+            xs = [xs]
+
+        # if not a list, assume it's an individual element, so push through integrate1
+        if type(xs) is not list:
+            return integrate1([xs])
+
+        # if it is a list, but is empty, then return empty list
+        if not len(xs):
+            return []
+
+        # it is a list, but not of tuples
+        # so assume that it is list of elements
+        if type(xs[0]) is not tuple:
+            return integrate1(xs)
+
+        # otherwise, we now have a none empty list of tuples
+        # figure out which component in the first tuple can be integrated
+        for i, x_cmp in enumerate(xs[0]):
+
+            anti_x_cmp = integrate1(x_cmp)
+
+            # if this component can't be integrated, continue the loop
+            if anti_x_cmp is None:
+                continue
+
+            # otherwise construct the anti_derivative that kills it
+            else:
+                if i == 0:
+                    anti_x = (anti_x_cmp,) + tuple(xs[0][1:])
+                else:
+                    anti_x = tuple(xs[0][:i]) + (anti_x_cmp, ) + tuple(xs[0][i + 1:])
+
+                anti_x = expand_tuple_list(anti_x)
+                # take the derivative of that anti-derivative and subtract from our list
+                anti_x_full_derivative = [dx_tp for dx in derivative(anti_x, C) for dx_tp in expand_tuple_list(dx) if all(dx)]
+                remainder = list_mod(anti_x_full_derivative + xs, 2)
+
+                # attempt to integrate that remaining portion on its own
+                anti_rem = integrate(remainder)
+
+                # if successful, then we have constructed a valid integral for xs
+                if anti_rem is not None:
+                    # sweet
+                    return anti_rem + anti_x
+
+                # otherwise loop back around and check for another component
+
+        return None
+
+    return f, integrate
 
 
 def main():
+
+    print "Expand Tuple List tests"
+    print "([1], [1, 2]) = ", expand_tuple_list(([1], [1, 2]))
+    print "([1, 2], [1, 2, 3], [5, 6]) =", expand_tuple_list(([1, 2], [1, 2, 3], [5, 6]))
+    print
 
     # test data toy
     DGC = Coalgebra(
@@ -179,7 +268,7 @@ def main():
 
     DGC_g = {'h1_0': ['a'], 'h0_0': ['v'], 'h2_0': ['ab']}
 
-    f = generate_f_integral(DGC, DGC_g)
+    f, integrate = generate_f_integral(DGC, DGC_g)
 
     print "DGC Toy"
     print "f(v) = ", f(['v'])
@@ -190,6 +279,7 @@ def main():
     print "f(a + b) = ", f(['a', 'b'])
     print "f(aa + ab) = ", f(['aa', 'ab'])
 
+    print "\nintegrate(a x b) =", integrate(('a','b'))
 
     # test data linked
     LNK = Coalgebra(
@@ -200,7 +290,7 @@ def main():
 
     LNK_g = {'h1_0': ['a'], 'h0_0': ['v'], 'h2_0': ['t_{1}'], 'h1_1': ['b']}
 
-    f = generate_f_integral(LNK, LNK_g)
+    f, integrate = generate_f_integral(LNK, LNK_g)
 
     print "\n\nLINKED"
     print "f(v) = ", f(['v'])
@@ -220,18 +310,27 @@ def main():
 
     BR_g = {'h0_0': ['v_{1}'], 'h2_1': ['t_{5}', 't_{6}', 't_{7}', 't_{8}'], 'h2_0': ['t_{1}', 't_{2}', 't_{3}', 't_{4}'], 'h1_0': ['m_{11}', 'm_{4}'], 'h1_1': ['c_{3}', 'c_{7}'], 'h1_2': ['m_{6}', 'm_{9}']}
 
-    f_BR = generate_f_integral(BR_C, BR_g)
+    f_BR, integrate_BR = generate_f_integral(BR_C, BR_g)
 
     print "\n\nBorromean Rings"
     for c in [c for cells in BR_C.groups.values() for c in cells]:
-        print "f(", c, ") = ", f_BR([c])
+        result_f_c = f_BR([c])
+        if result_f_c:
+            print "f(", c, ") = ", result_f_c
 
     for (l, r) in combinations(BR_C.groups[1], 2):
-        print "f({} + {}) = {}".format(l, r, f_BR([l, r]))
+        result_f_cxc = f_BR([l, r])
+        if result_f_cxc:
+            print "f({} + {}) = {}".format(l, r, result_f_cxc)
 
     print "f(m_{4} + m_{11} + m_{8}) = ", f_BR(['m_{4}', 'm_{11}', 'm_{8}'])
     print "f(m_{4} + m_{11} + m_{14}) = ", f_BR(['m_{4}', 'm_{11}', 'm_{14}'])
 
+
+    print "d( m11 ) = ", derivative('m_{11}', BR_C)
+    print "d( (m_4, m_11) ) = ", derivative(('m_{4}', 'm_{11}'), BR_C)
+    print "d( (m_4, m_11, v10) ) = ", derivative(('m_{4}', 'm_{11}', 'v_{10}'), BR_C)
+
+
 if __name__ == '__main__':
-    print "Name = ",  __name__
     main()
