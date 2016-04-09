@@ -13,7 +13,7 @@ import numpy
 # Local imports
 import CellChainParse
 from Coalgebra import Coalgebra
-from factorize import factorize_recursive as factorize
+from factorize import factorize
 from support_functions import generate_f_integral, row_reduce_mod2, add_maps_mod_2, derivative, expand_tuple_list
 
 __author__ = 'mfansler'
@@ -118,13 +118,26 @@ if not result:
 
 # construct coalgebra
 C = Coalgebra(result["groups"], result["differentials"], result["coproducts"])
+differential = {n: C.incidence_matrix(n, sparse=False) for n in range(1, C.topDimension() + 1)}
+delta_c = {k: [c for c, i in v.items() if i % 2] for k, v in C.coproduct.items()}
 
+"""
+Checking Coassociativity on Delta_C
+"""
+
+# (1 x Delta) Delta
+id_x_Delta_Delta = {k: [(l,) + r_cp for (l, r) in v for r_cp in delta_c[r]] for k, v in delta_c.items()}
+
+# (Delta x 1) Delta
+Delta_x_id_Delta = {k: [l_cp + (r,) for (l, r) in v for l_cp in delta_c[l]] for k, v in delta_c.items()}
+
+# DeltaC = (1 x Delta_C + Delta_C x 1) Delta_C
+id_x_Delta_Delta_id_Delta = add_maps_mod_2(id_x_Delta_Delta, Delta_x_id_Delta)
+print DELTA + "_c is co-associative?", not any(id_x_Delta_Delta_id_Delta.values())
 
 """
 COMPUTE HOMOLOGY
 """
-
-differential = {n: C.incidence_matrix(n, sparse=False) for n in range(1, C.topDimension() + 1)}
 
 # create temporary file for CHomP
 scratch = open(temp_mat, 'w+')

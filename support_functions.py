@@ -5,16 +5,14 @@ from collections import Counter
 from itertools import combinations
 
 from Coalgebra import Coalgebra
-from factorize import factorize_recursive as factorize
-from factorize import expand_tuple_list
+from factorize import factorize, expand_tuple_list
 
 __author__ = 'mfansler'
 
 
-
 def add_maps_mod_2(a, b):
 
-    res = a
+    res = a.copy()
     for k, vals in b.items():
         if k not in res:
             res[k] = vals
@@ -155,6 +153,9 @@ def generate_f_integral(C, g):
     # method to be returned
     # cannonical map of x in C to coset in H
     def f(x):
+
+        if type(x) is not list:
+            x = [x]
 
         # check if not cycle (non-vanishing boundary)
         bd = list_mod([dx for cell in x if cell in C.differential for dx in C.differential[cell].items()], 2)
@@ -332,13 +333,13 @@ def main():
     print "f(m_{4} + m_{11} + m_{8}) = ", f_BR(['m_{4}', 'm_{11}', 'm_{8}'])
     print "f(m_{4} + m_{11} + m_{14}) = ", f_BR(['m_{4}', 'm_{11}', 'm_{14}'])
 
-
     print "d( m11 ) = ", derivative('m_{11}', BR_C)
     print "d( (m_4, m_11) ) = ", derivative(('m_{4}', 'm_{11}'), BR_C)
     print "d( (m_4, m_11, v10) ) = ", derivative(('m_{4}', 'm_{11}', 'v_{10}'), BR_C)
 
     print "integrate((m_{4} + m{11}) x (v_{1} + v_{2})) = ", integrate_BR([(['m_{11}', 'm_{4}'], ['v_{2}', 'v_{1}'])])
 
+    print "f(c_{3} + c_{7} + m_{4} + m_{11}) =", f_BR(['c_{3}', 'c_{7}', 'm_{4}', 'm_{11}'])
 
 if __name__ == '__main__':
     main()

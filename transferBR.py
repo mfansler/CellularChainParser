@@ -15,7 +15,8 @@ sys.stdout=codecs.getwriter('utf-8')(sys.stdout)
 # Local imports
 import CellChainParse
 from Coalgebra import Coalgebra
-from factorize import expand_tuple_list, factorize
+from factorize import expand_tuple_list
+from factorize import factorize
 from support_functions import generate_f_integral, row_reduce_mod2, add_maps_mod_2, derivative, list_mod
 
 __author__ = 'mfansler'
@@ -130,12 +131,33 @@ if not result:
 # construct coalgebra
 C = Coalgebra(result["groups"], result["differentials"], result["coproducts"])
 
+differential = {n: C.incidence_matrix(n, sparse=False) for n in range(1, C.topDimension() + 1)}
+delta_c = {k: [c for c, i in v.items() if i % 2] for k, v in C.coproduct.items()}
+
+"""
+Checking Coassociativity on Delta_C
+"""
+
+# (1 x Delta) Delta
+id_x_Delta_Delta = {k: [(l,) + r_cp for (l, r) in v for r_cp in delta_c[r]] for k, v in delta_c.items()}
+# print
+# print u"(1 " + OTIMES + " " + DELTA + ") " + DELTA + " =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta_Delta.items() if v})
+
+# (Delta x 1) Delta
+Delta_x_id_Delta = {k: [l_cp + (r,) for (l, r) in v for l_cp in delta_c[l]] for k, v in delta_c.items()}
+# print
+# print u"(" + DELTA + " " + OTIMES + " 1) " + DELTA + " =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in Delta_x_id_Delta.items() if v})
+
+# DeltaC = (1 x Delta_C + Delta_C x 1) Delta_C
+id_x_Delta_Delta_id_Delta = add_maps_mod_2(id_x_Delta_Delta, Delta_x_id_Delta)
+print DELTA + "_c is co-associative?", not any(id_x_Delta_Delta_id_Delta.values())
+
+# print
+# print u"(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + " =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta_Delta_id_Delta.items() if v})
 
 """
 COMPUTE HOMOLOGY
 """
-
-differential = {n: C.incidence_matrix(n, sparse=False) for n in range(1, C.topDimension() + 1)}
 
 H_gens = {}
 
@@ -156,6 +178,21 @@ print "g = ", format_morphism(g)
 # generate f: C -> H
 f, integrate = generate_f_integral(C, g)
 
+#(1 x Delta + Delta x 1) Delta g
+id_x_Delta_Delta_id_Delta_g = {k: list_mod([tp for c in v for tp in id_x_Delta_Delta_id_Delta[c]], 2) for k, v in g.items()}
+print
+print u"(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + "g =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta_Delta_id_Delta_g.items() if v})
+
+# Delta_c3
+Delta_c3 = {k: integrate(vs) for k, vs in id_x_Delta_Delta_id_Delta.items()}
+print
+print DELTA + u"_C3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in Delta_c3.items() if v})
+
+
+"""
+COMPUTE Delta_2, g^2
+"""
+
 # define Delta g
 delta_g = {k: chain_coproduct(v, C.coproduct) for k, v in g.items()}
 print
@@ -167,6 +204,7 @@ print DELTA + u"g (unsimplified) =", {k: chain_coproduct(v, C.coproduct, simplif
 factored_delta_g = {k: factorize(v) for k, v in delta_g.items()}
 print
 print DELTA + u"g (factored) =", factored_delta_g
+
 
 delta2 = {k: [tuple(map(f, list(t))) for t in tuples] for k, tuples in factored_delta_g.items()}
 
@@ -184,10 +222,6 @@ print u"(g " + OTIMES + " g)" + DELTA + "_2 =", format_morphism({k: [format_tupl
 nabla_g2 = add_maps_mod_2(gxgDelta, delta_g)
 print
 print u"(g " + OTIMES + " g)" + DELTA + "_2 + " + DELTA + "g =", format_morphism({k: [format_tuple(t) for t in v] for k, v in nabla_g2.items() if v})
-
-# factored_nabla_g2 = {k: factorize(v) for k, v in nabla_g2.items() if v}
-# print
-# print u"(g " + OTIMES + " g)" + DELTA + "_2 + " + DELTA + "g (factored) =", factored_nabla_g2
 
 # g^2
 g2 = {k: integrate(vs) for k, vs in nabla_g2.items()}
@@ -253,6 +287,36 @@ print "(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) g^2 =",
 
 print "RAW PHI1 = "
 print phi_1
+
+nabla_phi1_computed = {k: [exp_tp for (l, m, r) in derivative(v, C) for exp_tp in expand_tuple_list((l, m, r)) if l and m and r] for k, v in phi_1.items() if v}
+nabla_phi1_computed = {k: list_mod(vs, modulus=2) for k, vs in nabla_phi1_computed.items()}
+print
+print NABLA + u" phi_1 =", format_morphism(nabla_phi1_computed)
+
+# (1 x Delta) Delta g
+id_x_Delta_Delta_g = {k: [(l,) + r_cp for (l, r) in v for r_cp in C.coproduct[r].keys()] for k, v in delta_g.items()}
+print
+print u"(1 " + OTIMES + " " + DELTA + ") " + DELTA + " g =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta_Delta_g.items() if v})
+
+# (Delta x 1) Delta g
+Delta_x_1_Delta_g = {k: [l_cp + (r,) for (l, r) in v for l_cp in C.coproduct[l].keys()] for k, v in delta_g.items()}
+print
+print u"( " + DELTA + " " + OTIMES + " 1) " + DELTA + " g =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in Delta_x_1_Delta_g.items() if v})
+
+
+sum_phi1_boundary = add_maps_mod_2(id_x_Delta_Delta_g, Delta_x_1_Delta_g)
+print
+print u"(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + " g =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in sum_phi1_boundary.items() if v})
+
+factored_nabla_phi_1 = {k: factorize(v) for k, v in nabla_phi1_computed.items()}
+print
+print NABLA + u" phi_1 (factored) =", factored_nabla_phi_1
+
+
+diff_phi1_boundary_nabla_phi1 = add_maps_mod_2(nabla_phi1_computed, sum_phi1_boundary)
+print
+print u"(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + " g + " + NABLA + " phi_1 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in diff_phi1_boundary_nabla_phi1.items() if v})
+
 
 # factor phi_1
 factored_phi_1 = {k: factorize(v) for k, v in phi_1.items() if v}
