@@ -14,7 +14,7 @@ import numpy
 import CellChainParse
 from Coalgebra import Coalgebra
 from factorize import factorize
-from support_functions import generate_f_integral, row_reduce_mod2, add_maps_mod_2, derivative, expand_tuple_list
+from support_functions import generate_f_integral, list_mod, add_maps_mod_2, derivative, expand_tuple_list
 
 __author__ = 'mfansler'
 temp_mat = "~transfer-temp.mat"
@@ -174,6 +174,11 @@ for n, k in enumerate(dims):
 H = {dim: ["h{}_{}".format(dim, i) for i, gen in enumerate(gens)] for dim, gens in H_gens.items()}
 print "H = H*(C) = ", H
 
+
+"""
+DEFINE MAPS BETWEEN CHAINS AND HOMOLOGY
+"""
+
 # Define g
 g = {"h{}_{}".format(dim, i): gen for dim, gens in H_gens.items() for i, gen in enumerate(gens) if gen}
 print
@@ -181,6 +186,10 @@ print "g = ", format_morphism(g)
 
 # generate f: C -> H
 f, integrate = generate_f_integral(C, g)
+
+"""
+COMPUTE Delta_2, g^2
+"""
 
 # define Delta g
 delta_g = {k: chain_coproduct(v, C.coproduct) for k, v in g.items()}
@@ -216,13 +225,60 @@ g2 = {k: integrate(vs) for k, vs in nabla_g2.items()}
 print
 print u"g^2 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in g2.items() if v})
 
+"""
+VERIFY CONSISTENCY OF DELTA2, g^2 RESULTS
+"""
+
+nabla_g2_computed = {k: [exp_tp for (l, r) in derivative(v, C) for exp_tp in expand_tuple_list((l, r)) if l and r] for k, v in g2.items() if v}
+nabla_g2_computed = {k: list_mod(vs, modulus=2) for k, vs in nabla_g2_computed.items()}
 print
-print NABLA + u" g^2 =", format_morphism({k: [(l, r) for (l, r) in derivative(v, C) if l and r] for k, v in g2.items() if v})
+print NABLA + u" g^2 =", format_morphism(nabla_g2_computed)
 
-# VERIFY: DELTA g = (g x g) DELTA_2 + NABLA g^2
+print u"\n(g " + OTIMES + " g)" + DELTA + "_2 + " + DELTA + "g + " + NABLA + "g^2 = 0 ? ",
+print not any(add_maps_mod_2(nabla_g2_computed, nabla_g2).values())
 
-# -------------------------------------------- #
 
+"""
+VERIFY DELTA2 COASSOCIATIVITY
+"""
+
+# (1 x Delta_2) Delta_2
+id_x_Delta2_Delta2 = {k: [(l,) + r_cp for (l, r) in v for r_cp in delta2[r]] for k, v in delta2.items()}
+# print
+# print u"(1 " + OTIMES + " " + DELTA + "_2) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta2_Delta2.items() if v})
+
+# (Delta_2 x 1) Delta_2
+Delta2_x_id_Delta2 = {k: [l_cp + (r,) for (l, r) in v for l_cp in delta2[l]] for k, v in delta2.items()}
+# print
+# print u"(" + DELTA + "_2 " + OTIMES + " 1) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in Delta2_x_id_Delta2.items() if v})
+
+# z_1 = (1 x Delta_2 + Delta_2 x 1) Delta_2
+z_1 = add_maps_mod_2(id_x_Delta2_Delta2, Delta2_x_id_Delta2)
+# print
+# print u"z_1 = (1 " + OTIMES + " " + DELTA + "_2 + " + DELTA + "_2 " + OTIMES + " 1) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in z_1.items() if v})
+print
+print DELTA + "_2 is co-associative?", not any(z_1.values())
+
+"""
+COMPUTE DELTA_C_3
+"""
+
+#(1 x Delta + Delta x 1) Delta g
+id_x_Delta_Delta_id_Delta_g = {k: list_mod([tp for c in v for tp in id_x_Delta_Delta_id_Delta[c]], 2) for k, v in g.items()}
+print
+print u"(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + "g =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta_Delta_id_Delta_g.items() if v})
+
+
+
+
+# Delta_c3
+Delta_c3 = {k: integrate(vs) for k, vs in id_x_Delta_Delta_id_Delta.items()}
+print
+print DELTA + u"_C3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in Delta_c3.items() if v})
+
+"""
+COMPUTE DELTA3, g^3
+"""
 
 # (1 x Delta) g^2
 id_x_Delta_g2 = {k: [(l,) + r_cp for (l, r) in v for r_cp in C.coproduct[r].keys()] for k, v in g2.items()}
@@ -243,21 +299,6 @@ print u"( g " + OTIMES + " g^2 ) " + DELTA + "_2 =",  format_morphism({k: [forma
 g2_x_g_Delta2 = {k: [t + (r_cp,) for l, r in v for t in g2[l] for r_cp in g[r]] for k, v in delta2.items()}
 print
 print u"( g^2 " + OTIMES + " g ) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g2_x_g_Delta2.items() if v})
-
-# (1 x Delta_2) Delta_2
-id_x_Delta2_Delta2 = {k: [(l,) + r_cp for (l, r) in v for r_cp in delta2[r]] for k, v in delta2.items()}
-print
-print u"(1 " + OTIMES + " " + DELTA + "_2) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta2_Delta2.items() if v})
-
-# (Delta_2 x 1) Delta_2
-Delta2_x_id_Delta2 = {k: [l_cp + (r,) for (l, r) in v for l_cp in delta2[l]] for k, v in delta2.items()}
-print
-print u"(" + DELTA + "_2 " + OTIMES + " 1) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in Delta2_x_id_Delta2.items() if v})
-
-# z_1 = (1 x Delta_2 + Delta_2 x 1) Delta_2
-z_1 = add_maps_mod_2(id_x_Delta2_Delta2, Delta2_x_id_Delta2)
-print
-print u"z_1 = (1 " + OTIMES + " " + DELTA + "_2 + " + DELTA + "_2 " + OTIMES + " 1) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in z_1.items() if v})
 
 # phi_1 = (1 x Delta + Delta x 1) g^2 + (g x g^2 + g^2 x g) Delta_2
 phi_1 = reduce(add_maps_mod_2, [g_x_g2_Delta2, g2_x_g_Delta2, id_x_Delta_g2, Delta_x_id_g2], {})
