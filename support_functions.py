@@ -26,10 +26,8 @@ def add_maps_mod_2(a, b):
 
 
 def row_swap(A, r1, r2):
-
-    tmp = A.getrow(r1).copy()
-    A[r1] = A[r2]
-    A[r2] = tmp
+    A.rows[r1], A.rows[r2] = A.rows[r2], A.rows[r1]
+    A.data[r1], A.data[r2] = A.data[r2], A.data[r1]
 
 
 def mat_mod2(A):
@@ -38,13 +36,18 @@ def mat_mod2(A):
     return A
 
 
+def add_rows(A, r1, r2):
+    A.rows[r2] = sorted(list_mod(A.rows[r1] + A.rows[r2]))
+    A.data[r2] = [1]*len(A.rows[r2])
+
+
 def row_reduce_mod2(A, augment=0):
 
     if A.ndim != 2:
         raise Exception("require two dimensional matrix input, found ", A.ndim)
 
-    A = A.tocsr()
-    A = mat_mod2(A)
+    A = A.tolil()
+    A.data = [[x % 2 for x in xs] for xs in A.data]
     rank = 0
     for i in range(A.shape[1] - augment):
 
@@ -55,14 +58,16 @@ def row_reduce_mod2(A, augment=0):
         if len(lower_nzs) > 0:
 
             row_swap(A, rank, lower_nzs[0])
+
             for nz in lower_nzs[1:]:
-                A[nz, :] = mat_mod2(A[nz, :] + A[rank, :])
+                add_rows(A, rank, nz)
 
             if rank > 0:
                 for nz in upper_nzs:
-                    A[nz, :] = mat_mod2(A[nz, :] + A[rank, :])
+                    add_rows(A, rank, nz)
 
             rank += 1
+            print "rank =", rank
 
     return A, rank
 
