@@ -6,14 +6,17 @@
 
 C_{0}(X) = \{ v \}
 C_{1}(X) = \{ a, b \}
-C_{2}(X) = \{ aa, ab, ba \}
+C_{2}(X) = \{ aa, ab \}
+C_{3}(X) = \{ c \}
+C_{4}(X) = \{ aba \}
 
 \partial aa = b
-\partial ba = a
+\partial aba = c
 
 \Delta v = v \otimes v
 \Delta a = v \otimes a + a \otimes v
 \Delta b = v \otimes b + b \otimes v
 \Delta aa = v \otimes aa + a \otimes a + aa \otimes v
 \Delta ab = v \otimes ab + a \otimes b + ab \otimes v
-\Delta ba = v \otimes ba + b \otimes a + ba \otimes v
+\Delta c = v \otimes c + ab \otimes a + c \otimes v
+\Delta aba = v \otimes aba + aba \otimes v

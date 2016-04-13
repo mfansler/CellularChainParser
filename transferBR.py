@@ -153,8 +153,12 @@ Delta_x_id_Delta = {k: [l_cp + (r,) for (l, r) in v for l_cp in delta_c[l]] for 
 id_x_Delta_Delta_id_Delta = add_maps_mod_2(id_x_Delta_Delta, Delta_x_id_Delta)
 print DELTA + "_c is co-associative?", not any(id_x_Delta_Delta_id_Delta.values())
 
-# print
-# print u"(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + " =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta_Delta_id_Delta.items() if v})
+if any(id_x_Delta_Delta_id_Delta.values()):
+    print u"\n\n(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + " =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta_Delta_id_Delta.items() if v})
+
+    factored_id_x_Delta_Delta_id_Delta = {k: factorize(v) for k, v in id_x_Delta_Delta_id_Delta.items()}
+    print factored_id_x_Delta_Delta_id_Delta
+
 
 """
 COMPUTE HOMOLOGY
@@ -285,9 +289,10 @@ print "Hom0 basis_size =", hom0_basis_size
 print "Hom1 basis_size =", hom1_basis_size
 
 d_hom1_C_CxCxC = sp.lil_matrix((hom1_basis_size + 1, hom0_basis_size), dtype=numpy.int8)
-legend = {}
-next_free_H1 = 0
-next_free_H0 = 0
+legend_Hom0 = {}
+legend_Hom1 = []
+next_free_Hom1 = 0
+next_free_Hom0 = 0
 
 print "Constructing d Hom_1 (H, CxCxC) matrix"
 print "H_0 -> ..."
@@ -296,40 +301,43 @@ for c1 in C.groups[0]:
     for c2 in C.groups[0]:
         for c3 in C.groups[1]:
             # C1 last
+            legend_Hom1.append((c1, c2, c3))
             for cell in [dx for dxs in derivative((c1, c2, c3), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend:
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                if cell in legend_Hom0:
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
                 else:
-                    legend[cell] = next_free_H0
-                    next_free_H0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                    legend_Hom0[cell] = next_free_Hom0
+                    next_free_Hom0 += 1
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
 
-            next_free_H1 += 1
+            next_free_Hom1 += 1
 
             # C1 middle
+            legend_Hom1.append((c1, c3, c2))
             for cell in [dx for dxs in derivative((c1, c3, c2), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend:
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                if cell in legend_Hom0:
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
                 else:
-                    legend[cell] = next_free_H0
-                    next_free_H0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                    legend_Hom0[cell] = next_free_Hom0
+                    next_free_Hom0 += 1
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
 
-            next_free_H1 += 1
+            next_free_Hom1 += 1
 
             # C1 first
+            legend_Hom1.append((c3, c1, c2))
             for cell in [dx for dxs in derivative((c3, c1, c2), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend:
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                if cell in legend_Hom0:
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
                 else:
-                    legend[cell] = next_free_H0
-                    next_free_H0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                    legend_Hom0[cell] = next_free_Hom0
+                    next_free_Hom0 += 1
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
 
-            next_free_H1 += 1
+            next_free_Hom1 += 1
 
-print next_free_H1, "rows used"
-print next_free_H0, "columns used"
+print next_free_Hom1, "rows used"
+print next_free_Hom0, "columns used"
 print "H_1 -> ..."
 
 #H1
@@ -337,76 +345,82 @@ for c1 in C.groups[0]:
     for c2 in C.groups[0]:
         for c3 in C.groups[2]:
             # C0 x C0 x C2
+            legend_Hom1.append((c1, c2, c3))
             for cell in [dx for dxs in derivative((c1, c2, c3), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend:
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                if cell in legend_Hom0:
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
                 else:
-                    legend[cell] = next_free_H0
-                    next_free_H0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                    legend_Hom0[cell] = next_free_Hom0
+                    next_free_Hom0 += 1
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
 
-            next_free_H1 += 1
+            next_free_Hom1 += 1
 
             # C0 x C2 x C0
+            legend_Hom1.append((c1, c3, c2))
             for cell in [dx for dxs in derivative((c1, c3, c2), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend:
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                if cell in legend_Hom0:
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
                 else:
-                    legend[cell] = next_free_H0
-                    next_free_H0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                    legend_Hom0[cell] = next_free_Hom0
+                    next_free_Hom0 += 1
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
 
-            next_free_H1 += 1
+            next_free_Hom1 += 1
 
             # C2 x C0 x C0
+            legend_Hom1.append((c3, c1, c2))
             for cell in [dx for dxs in derivative((c3, c1, c2), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend:
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                if cell in legend_Hom0:
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
                 else:
-                    legend[cell] = next_free_H0
-                    next_free_H0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                    legend_Hom0[cell] = next_free_Hom0
+                    next_free_Hom0 += 1
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
 
-            next_free_H1 += 1
+            next_free_Hom1 += 1
 
 for c1 in C.groups[0]:
     for c2 in C.groups[1]:
         for c3 in C.groups[1]:
             # C0 x C1 x C1
+            legend_Hom1.append((c1, c2, c3))
             for cell in [dx for dxs in derivative((c1, c2, c3), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend:
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                if cell in legend_Hom0:
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
                 else:
-                    legend[cell] = next_free_H0
-                    next_free_H0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                    legend_Hom0[cell] = next_free_Hom0
+                    next_free_Hom0 += 1
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
 
-            next_free_H1 += 1
+            next_free_Hom1 += 1
 
             # C0 x C1 x C0
+            legend_Hom1.append((c2, c1, c3))
             for cell in [dx for dxs in derivative((c2, c1, c3), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend:
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                if cell in legend_Hom0:
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
                 else:
-                    legend[cell] = next_free_H0
-                    next_free_H0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                    legend_Hom0[cell] = next_free_Hom0
+                    next_free_Hom0 += 1
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
 
-            next_free_H1 += 1
+            next_free_Hom1 += 1
 
             # C0 x C0 x C1
+            legend_Hom1.append((c2, c3, c1))
             for cell in [dx for dxs in derivative((c2, c3, c1), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend:
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                if cell in legend_Hom0:
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
                 else:
-                    legend[cell] = next_free_H0
-                    next_free_H0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                    legend_Hom0[cell] = next_free_Hom0
+                    next_free_Hom0 += 1
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
 
-            next_free_H1 += 1
+            next_free_Hom1 += 1
 
-print next_free_H1, "rows used"
-print next_free_H0, "columns used"
+print next_free_Hom1, "rows used"
+print next_free_Hom0, "columns used"
 print "H_2 -> ..."
 
 # H2
@@ -414,130 +428,140 @@ for c1 in C.groups[0]:
     for c2 in C.groups[0]:
         for c3 in C.groups[3]:
             # C0 x C0 x C3
+            legend_Hom1.append((c1, c2, c3))
             for cell in [dx for dxs in derivative((c1, c2, c3), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend:
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                if cell in legend_Hom0:
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
                 else:
-                    legend[cell] = next_free_H0
-                    next_free_H0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                    legend_Hom0[cell] = next_free_Hom0
+                    next_free_Hom0 += 1
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
 
-            next_free_H1 += 1
+            next_free_Hom1 += 1
 
             # C0 x C3 x C0
+            legend_Hom1.append((c1, c3, c2))
             for cell in [dx for dxs in derivative((c1, c3, c2), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend:
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                if cell in legend_Hom0:
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
                 else:
-                    legend[cell] = next_free_H0
-                    next_free_H0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                    legend_Hom0[cell] = next_free_Hom0
+                    next_free_Hom0 += 1
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
 
-            next_free_H1 += 1
+            next_free_Hom1 += 1
 
             # C3 x C0 x C0
+            legend_Hom1.append((c3, c1, c2))
             for cell in [dx for dxs in derivative((c3, c1, c2), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend:
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                if cell in legend_Hom0:
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
                 else:
-                    legend[cell] = next_free_H0
-                    next_free_H0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                    legend_Hom0[cell] = next_free_Hom0
+                    next_free_Hom0 += 1
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
 
-            next_free_H1 += 1
+            next_free_Hom1 += 1
 
 for c1 in C.groups[0]:
     for c2 in C.groups[1]:
         for c3 in C.groups[2]:
             # C0 x C1 x C2
+            legend_Hom1.append((c1, c2, c3))
             for cell in [dx for dxs in derivative((c1, c2, c3), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend:
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                if cell in legend_Hom0:
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
                 else:
-                    legend[cell] = next_free_H0
-                    next_free_H0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                    legend_Hom0[cell] = next_free_Hom0
+                    next_free_Hom0 += 1
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
 
-            next_free_H1 += 1
+            next_free_Hom1 += 1
 
             # C1 x C0 x C2
+            legend_Hom1.append((c2, c1, c3))
             for cell in [dx for dxs in derivative((c2, c1, c3), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend:
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                if cell in legend_Hom0:
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
                 else:
-                    legend[cell] = next_free_H0
-                    next_free_H0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                    legend_Hom0[cell] = next_free_Hom0
+                    next_free_Hom0 += 1
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
 
-            next_free_H1 += 1
+            next_free_Hom1 += 1
 
             # C0 x C2 x C1
+            legend_Hom1.append((c1, c3, c2))
             for cell in [dx for dxs in derivative((c1, c3, c2), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend:
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                if cell in legend_Hom0:
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
                 else:
-                    legend[cell] = next_free_H0
-                    next_free_H0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                    legend_Hom0[cell] = next_free_Hom0
+                    next_free_Hom0 += 1
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
 
-            next_free_H1 += 1
+            next_free_Hom1 += 1
 
             # C1 x C2 x C0
+            legend_Hom1.append((c2, c3, c1))
             for cell in [dx for dxs in derivative((c2, c3, c1), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend:
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                if cell in legend_Hom0:
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
                 else:
-                    legend[cell] = next_free_H0
-                    next_free_H0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                    legend_Hom0[cell] = next_free_Hom0
+                    next_free_Hom0 += 1
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
 
-            next_free_H1 += 1
+            next_free_Hom1 += 1
 
             # C2 x C0 x C1
+            legend_Hom1.append((c3, c1, c2))
             for cell in [dx for dxs in derivative((c3, c1, c2), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend:
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                if cell in legend_Hom0:
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
                 else:
-                    legend[cell] = next_free_H0
-                    next_free_H0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                    legend_Hom0[cell] = next_free_Hom0
+                    next_free_Hom0 += 1
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
 
-            next_free_H1 += 1
+            next_free_Hom1 += 1
 
             # C2 x C1 x C0
+            legend_Hom1.append((c3, c2, c1))
             for cell in [dx for dxs in derivative((c3, c2, c1), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend:
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                if cell in legend_Hom0:
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
                 else:
-                    legend[cell] = next_free_H0
-                    next_free_H0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                    legend_Hom0[cell] = next_free_Hom0
+                    next_free_Hom0 += 1
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
 
-            next_free_H1 += 1
+            next_free_Hom1 += 1
 
 for c1 in C.groups[1]:
     for c2 in C.groups[1]:
         for c3 in C.groups[1]:
             # C1 x C1 x C1
+            legend_Hom1.append((c1, c2, c3))
             for cell in [dx for dxs in derivative((c1, c2, c3), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend:
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                if cell in legend_Hom0:
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
                 else:
-                    legend[cell] = next_free_H0
-                    next_free_H0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+                    legend_Hom0[cell] = next_free_Hom0
+                    next_free_Hom0 += 1
+                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
 
-            next_free_H1 += 1
+            next_free_Hom1 += 1
 
-print next_free_H1, "rows used"
-print next_free_H0, "columns used"
+print next_free_Hom1, "rows used"
+print next_free_Hom0, "columns used"
 print "Appending (1 x Delta + Delta x 1) Delta g"
 
 # append (1 x Delta + Delta x 1) Delta g in basis
 for cells in id_x_Delta_Delta_id_Delta_g.values():
     for cell in cells:
-        if cell in legend:
-            d_hom1_C_CxCxC.rows[next_free_H1].append(legend[cell])
+        if cell in legend_Hom0:
+            d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
         else:
             raise Exception("Could not find basis for (1 x Delta + Delta x 1) Delta g!")
 
@@ -549,6 +573,15 @@ d_hom1_C_CxCxC = d_hom1_C_CxCxC.transpose()
 print "Row reducing matrix..."
 rref_mat, rank = row_reduce_mod2(d_hom1_C_CxCxC, augment=1)
 print "Found rank {} matrix".format(rank)
+
+rref_vec = rref_mat[:, -1]
+delta_c3_g = []
+for nz in rref_vec.nonzero()[0]:
+    col = rref_mat[nz, :].nonzero()[0]
+    delta_c3_g.append(legend_Hom1[col])
+
+print delta_c3_g
+
 exit()
 
 # Delta_c3
