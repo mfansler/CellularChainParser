@@ -9,6 +9,10 @@ def expand_tuple_list(tp):
     return reduce(expand_tuple_helper, tp, [tuple()])
 
 
+def expand_map_all(xs):
+    return {k: [tp for v in vs for tp in expand_tuple_list(v)] for k, vs in xs.items()}
+
+
 def deep_freeze(x):
     type_x = type(x)
     if type_x is list or type_x is set:
