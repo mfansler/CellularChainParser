@@ -16,9 +16,9 @@ sys.stdout=codecs.getwriter('utf-8')(sys.stdout)
 # Local imports
 import CellChainParse
 from Coalgebra import Coalgebra
-from factorize import expand_tuple_list
+from factorize import expand_tuple_list, expand_map_all
 from factorize import factorize
-from support_functions import generate_f_integral, row_reduce_mod2, add_maps_mod_2, derivative, list_mod
+from support_functions import generate_f_integral, row_reduce_mod2, add_maps_mod_2, derivative, list_mod, chain_map_mod
 
 __author__ = 'mfansler'
 temp_mat = "~transfer-temp.mat"
@@ -150,11 +150,12 @@ Delta_x_id_Delta = {k: [l_cp + (r,) for (l, r) in v for l_cp in delta_c[l]] for 
 # print u"(" + DELTA + " " + OTIMES + " 1) " + DELTA + " =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in Delta_x_id_Delta.items() if v})
 
 # DeltaC = (1 x Delta_C + Delta_C x 1) Delta_C
-id_x_Delta_Delta_id_Delta = add_maps_mod_2(id_x_Delta_Delta, Delta_x_id_Delta)
-print DELTA + "_c is co-associative?", not any(id_x_Delta_Delta_id_Delta.values())
+id_x_Delta_Delta_x_id_Delta = add_maps_mod_2(id_x_Delta_Delta, Delta_x_id_Delta)
+id_x_Delta_Delta_x_id_Delta = {k: list_mod(ls, modulus=2) for k, ls in expand_map_all(id_x_Delta_Delta_x_id_Delta).items()}
+print DELTA + "_c is co-associative?", not any(id_x_Delta_Delta_x_id_Delta.values())
 
-if any(id_x_Delta_Delta_id_Delta.values()):
-    print u"\n(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + " =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta_Delta_id_Delta.items() if v})
+if any(id_x_Delta_Delta_x_id_Delta.values()):
+    print u"\n(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + " =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta_Delta_x_id_Delta.items() if v})
 
     # factored_id_x_Delta_Delta_id_Delta = {k: factorize(v) for k, v in id_x_Delta_Delta_id_Delta.items()}
     # print factored_id_x_Delta_Delta_id_Delta
@@ -268,326 +269,30 @@ COMPUTE DELTA_C_3
 """
 
 #(1 x Delta + Delta x 1) Delta g
-id_x_Delta_Delta_id_Delta_g = {k: list_mod([tp for c in v for tp in id_x_Delta_Delta_id_Delta[c]], 2) for k, v in g.items()}
+id_x_Delta_Delta_id_Delta_g = {k: list_mod([tp for c in v for tp in id_x_Delta_Delta_x_id_Delta[c]], 2) for k, v in g.items()}
 print
 print u"(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + "g =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta_Delta_id_Delta_g.items() if v})
 
-# build boundary matrix d( Hom_1(C, CxCxC) )
-C_dim_size = {dim: len(elements) for dim, elements in C.groups.items()}
-H_dim_size = {dim: len(elements) for dim, elements in H.items()}
-
-hom0_basis_size = H_dim_size[0] * C_dim_size[0]**3 + 3 * H_dim_size[1] * C_dim_size[1] * C_dim_size[0]**2 \
-                  + 3 * H_dim_size[2]*(C_dim_size[0]**2 * C_dim_size[2] + C_dim_size[0]*C_dim_size[1]**2)
-                  # + H_dim_size[3]*(6 * C_dim_size[0]*C_dim_size[1]*C_dim_size[2] + C_dim_size[1]**3 + 3 * C_dim_size[0]**2 * C_dim_size[3])
-
-hom1_basis_size = H_dim_size[0] * 3 * C_dim_size[1] * C_dim_size[0]**2 \
-                  + 3 * H_dim_size[1]*(C_dim_size[0]**2 * C_dim_size[2] + C_dim_size[0]*C_dim_size[1]**2) \
-                  + H_dim_size[2]*(6 * C_dim_size[0]*C_dim_size[1]*C_dim_size[2] + C_dim_size[1]**3 + 3 * C_dim_size[0]**2 * C_dim_size[3])
-
-
-print "Hom0 basis_size =", hom0_basis_size
-print "Hom1 basis_size =", hom1_basis_size
-
-d_hom1_C_CxCxC = sp.lil_matrix((hom1_basis_size + 1, hom0_basis_size), dtype=numpy.int8)
-legend_Hom0 = {}
-legend_Hom1 = []
-next_free_Hom1 = 0
-next_free_Hom0 = 0
-
-print "Constructing d Hom_1 (H, CxCxC) matrix"
-print "H_0 -> ..."
-#H0
-for c1 in C.groups[0]:
-    for c2 in C.groups[0]:
-        for c3 in C.groups[1]:
-            # C1 last
-            legend_Hom1.append((c1, c2, c3))
-            for cell in [dx for dxs in derivative((c1, c2, c3), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend_Hom0:
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-                else:
-                    legend_Hom0[cell] = next_free_Hom0
-                    next_free_Hom0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-
-            next_free_Hom1 += 1
-
-            # C1 middle
-            legend_Hom1.append((c1, c3, c2))
-            for cell in [dx for dxs in derivative((c1, c3, c2), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend_Hom0:
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-                else:
-                    legend_Hom0[cell] = next_free_Hom0
-                    next_free_Hom0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-
-            next_free_Hom1 += 1
-
-            # C1 first
-            legend_Hom1.append((c3, c1, c2))
-            for cell in [dx for dxs in derivative((c3, c1, c2), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend_Hom0:
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-                else:
-                    legend_Hom0[cell] = next_free_Hom0
-                    next_free_Hom0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-
-            next_free_Hom1 += 1
-
-print next_free_Hom1, "rows used"
-print next_free_Hom0, "columns used"
-print "H_1 -> ..."
-
-#H1
-for c1 in C.groups[0]:
-    for c2 in C.groups[0]:
-        for c3 in C.groups[2]:
-            # C0 x C0 x C2
-            legend_Hom1.append((c1, c2, c3))
-            for cell in [dx for dxs in derivative((c1, c2, c3), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend_Hom0:
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-                else:
-                    legend_Hom0[cell] = next_free_Hom0
-                    next_free_Hom0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-
-            next_free_Hom1 += 1
-
-            # C0 x C2 x C0
-            legend_Hom1.append((c1, c3, c2))
-            for cell in [dx for dxs in derivative((c1, c3, c2), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend_Hom0:
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-                else:
-                    legend_Hom0[cell] = next_free_Hom0
-                    next_free_Hom0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-
-            next_free_Hom1 += 1
-
-            # C2 x C0 x C0
-            legend_Hom1.append((c3, c1, c2))
-            for cell in [dx for dxs in derivative((c3, c1, c2), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend_Hom0:
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-                else:
-                    legend_Hom0[cell] = next_free_Hom0
-                    next_free_Hom0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-
-            next_free_Hom1 += 1
-
-for c1 in C.groups[0]:
-    for c2 in C.groups[1]:
-        for c3 in C.groups[1]:
-            # C0 x C1 x C1
-            legend_Hom1.append((c1, c2, c3))
-            for cell in [dx for dxs in derivative((c1, c2, c3), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend_Hom0:
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-                else:
-                    legend_Hom0[cell] = next_free_Hom0
-                    next_free_Hom0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-
-            next_free_Hom1 += 1
-
-            # C0 x C1 x C0
-            legend_Hom1.append((c2, c1, c3))
-            for cell in [dx for dxs in derivative((c2, c1, c3), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend_Hom0:
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-                else:
-                    legend_Hom0[cell] = next_free_Hom0
-                    next_free_Hom0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-
-            next_free_Hom1 += 1
-
-            # C0 x C0 x C1
-            legend_Hom1.append((c2, c3, c1))
-            for cell in [dx for dxs in derivative((c2, c3, c1), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend_Hom0:
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-                else:
-                    legend_Hom0[cell] = next_free_Hom0
-                    next_free_Hom0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-
-            next_free_Hom1 += 1
-
-print next_free_Hom1, "rows used"
-print next_free_Hom0, "columns used"
-print "H_2 -> ..."
-
-# H2
-for c1 in C.groups[0]:
-    for c2 in C.groups[0]:
-        for c3 in C.groups[3]:
-            # C0 x C0 x C3
-            legend_Hom1.append((c1, c2, c3))
-            for cell in [dx for dxs in derivative((c1, c2, c3), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend_Hom0:
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-                else:
-                    legend_Hom0[cell] = next_free_Hom0
-                    next_free_Hom0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-
-            next_free_Hom1 += 1
-
-            # C0 x C3 x C0
-            legend_Hom1.append((c1, c3, c2))
-            for cell in [dx for dxs in derivative((c1, c3, c2), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend_Hom0:
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-                else:
-                    legend_Hom0[cell] = next_free_Hom0
-                    next_free_Hom0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-
-            next_free_Hom1 += 1
-
-            # C3 x C0 x C0
-            legend_Hom1.append((c3, c1, c2))
-            for cell in [dx for dxs in derivative((c3, c1, c2), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend_Hom0:
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-                else:
-                    legend_Hom0[cell] = next_free_Hom0
-                    next_free_Hom0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-
-            next_free_Hom1 += 1
-
-for c1 in C.groups[0]:
-    for c2 in C.groups[1]:
-        for c3 in C.groups[2]:
-            # C0 x C1 x C2
-            legend_Hom1.append((c1, c2, c3))
-            for cell in [dx for dxs in derivative((c1, c2, c3), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend_Hom0:
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-                else:
-                    legend_Hom0[cell] = next_free_Hom0
-                    next_free_Hom0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-
-            next_free_Hom1 += 1
-
-            # C1 x C0 x C2
-            legend_Hom1.append((c2, c1, c3))
-            for cell in [dx for dxs in derivative((c2, c1, c3), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend_Hom0:
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-                else:
-                    legend_Hom0[cell] = next_free_Hom0
-                    next_free_Hom0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-
-            next_free_Hom1 += 1
-
-            # C0 x C2 x C1
-            legend_Hom1.append((c1, c3, c2))
-            for cell in [dx for dxs in derivative((c1, c3, c2), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend_Hom0:
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-                else:
-                    legend_Hom0[cell] = next_free_Hom0
-                    next_free_Hom0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-
-            next_free_Hom1 += 1
-
-            # C1 x C2 x C0
-            legend_Hom1.append((c2, c3, c1))
-            for cell in [dx for dxs in derivative((c2, c3, c1), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend_Hom0:
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-                else:
-                    legend_Hom0[cell] = next_free_Hom0
-                    next_free_Hom0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-
-            next_free_Hom1 += 1
-
-            # C2 x C0 x C1
-            legend_Hom1.append((c3, c1, c2))
-            for cell in [dx for dxs in derivative((c3, c1, c2), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend_Hom0:
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-                else:
-                    legend_Hom0[cell] = next_free_Hom0
-                    next_free_Hom0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-
-            next_free_Hom1 += 1
-
-            # C2 x C1 x C0
-            legend_Hom1.append((c3, c2, c1))
-            for cell in [dx for dxs in derivative((c3, c2, c1), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend_Hom0:
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-                else:
-                    legend_Hom0[cell] = next_free_Hom0
-                    next_free_Hom0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-
-            next_free_Hom1 += 1
-
-for c1 in C.groups[1]:
-    for c2 in C.groups[1]:
-        for c3 in C.groups[1]:
-            # C1 x C1 x C1
-            legend_Hom1.append((c1, c2, c3))
-            for cell in [dx for dxs in derivative((c1, c2, c3), C) for dx in expand_tuple_list(dxs)]:
-                if cell in legend_Hom0:
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-                else:
-                    legend_Hom0[cell] = next_free_Hom0
-                    next_free_Hom0 += 1
-                    d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-
-            next_free_Hom1 += 1
-
-print next_free_Hom1, "rows used"
-print next_free_Hom0, "columns used"
-print "Appending (1 x Delta + Delta x 1) Delta g"
-
-# append (1 x Delta + Delta x 1) Delta g in basis
-for cells in id_x_Delta_Delta_id_Delta_g.values():
-    for cell in cells:
-        if cell in legend_Hom0:
-            d_hom1_C_CxCxC.rows[next_free_Hom1].append(legend_Hom0[cell])
-        else:
-            raise Exception("Could not find basis for (1 x Delta + Delta x 1) Delta g!")
-
-# enter indices
-d_hom1_C_CxCxC.data = [[1]*len(row) for row in d_hom1_C_CxCxC.rows]
-
-d_hom1_C_CxCxC = d_hom1_C_CxCxC.transpose()
-
-print "Row reducing matrix..."
-rref_mat, rank = row_reduce_mod2(d_hom1_C_CxCxC, augment=1)
-print "Found rank {} matrix".format(rank)
-
-rref_vec = rref_mat[:, -1]
-delta_c3_g = []
-for nz in rref_vec.nonzero()[0]:
-    col = rref_mat[nz, :].nonzero()[0]
-    delta_c3_g.append(legend_Hom1[col])
-
-print delta_c3_g
-
-exit()
-
 # Delta_c3
-Delta_c3 = {k: integrate(vs) for k, vs in id_x_Delta_Delta_id_Delta.items()}
+delta_c3 = integrate(id_x_Delta_Delta_x_id_Delta)
 print
-print DELTA + u"_C3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in Delta_c3.items() if v})
+print DELTA + u"_C3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in delta_c3.items() if v})
+
+# verify consistency
+nabla_delta_c3_computed = derivative(delta_c3, C)
+nabla_delta_c3_computed = chain_map_mod(expand_map_all(nabla_delta_c3_computed))
+
+print
+print NABLA + DELTA + u"_C3 =", format_morphism(nabla_delta_c3_computed)
+
+print u"\n(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + " + " + NABLA + DELTA + u"_C3 = 0 ? ",
+print not any(add_maps_mod_2(id_x_Delta_Delta_x_id_Delta, nabla_delta_c3_computed).values())
+
+if any(add_maps_mod_2(id_x_Delta_Delta_x_id_Delta, nabla_delta_c3_computed).values()):
+    print u"\n(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + " + " + NABLA + DELTA + u"_C3 =",
+    print format_morphism({k: [format_tuple(t) for t in v] for k, v in add_maps_mod_2(id_x_Delta_Delta_x_id_Delta, nabla_delta_c3_computed).items() if v})
+    print add_maps_mod_2(id_x_Delta_Delta_x_id_Delta, nabla_delta_c3_computed)
+
 
 exit()
 
