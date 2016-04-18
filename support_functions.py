@@ -3,17 +3,18 @@ import scipy.sparse as sp
 
 from collections import Counter
 from itertools import combinations
+from copy import deepcopy
 
 from Coalgebra import Coalgebra
-from factorize import factorize, expand_tuple_list
+from factorize import factorize, expand_tuple_list, expand_map_all
 
 __author__ = 'mfansler'
 
 
 def add_maps_mod_2(a, b):
 
-    res = a.copy()
-    for k, vals in b.items():
+    res = deepcopy(a)
+    for k, vals in deepcopy(b).items():
         if k not in res:
             res[k] = vals
         else:
@@ -285,7 +286,54 @@ def generate_f_integral(C, g):
         return None
 
     def integrate_chain_map(xs):
-        return None
+        # assuming map comes in factored
+        expanded_map = {k: list_mod(ls, modulus=2) for k, ls in expand_map_all(xs).items()}
+        best_distance = sum([len(vs) for vs in expanded_map.values()])
+        #print "starting distance = ", best_distance
+        if best_distance == 0:
+            return {}
+
+        frontier = []
+
+        # generate initial frontier
+        for cell, tps in expanded_map.items():
+            for tp in tps:
+
+                # first generate anti-derivatives that kill chain components
+                for i in range(len(tp)):
+                    for anti_tp_cmp in facet_to_cells(tp[i], C):
+                        anti_tp_map = {cell: [tp[:i] + (anti_tp_cmp,) + tp[i+1:]]}
+                        der_anti_tp_map = expand_map_all(derivative(anti_tp_map, C))
+                        der_size = sum([len(vs) for vs in der_anti_tp_map.values()])
+                        num_hits = sum([1 for k, vs in der_anti_tp_map.items() for v in vs if k in expanded_map and v in expanded_map[k]])
+                        distance = best_distance + der_size - 2*num_hits
+                        if distance == 0:
+                            return anti_tp_map
+                        if distance < best_distance:
+                            frontier.append((distance, anti_tp_map, der_anti_tp_map))
+
+                # next, generate boundary components
+                for d_cell in derivative(cell, C):
+                    anti_tp_map = {d_cell: [tp]}
+                    der_anti_tp_map = expand_map_all(derivative(anti_tp_map, C))
+                    der_size = sum([len(vs) for vs in der_anti_tp_map.values()])
+                    num_hits = sum([1 for k, vs in der_anti_tp_map.items() for v in vs if k in expanded_map and v in expanded_map[k]])
+                    distance = best_distance + der_size - 2*num_hits
+                    if distance == 0:
+                        return anti_tp_map
+                    if distance < best_distance:
+                        frontier.append((distance, anti_tp_map, der_anti_tp_map))
+
+        frontier = sorted(frontier, key=lambda tp: tp[0])
+        result = None
+        while result is None and frontier:
+            cur_anti_xs = frontier.pop(0)
+            result = integrate_chain_map(add_maps_mod_2(expanded_map, cur_anti_xs[2]))
+
+        if result is None:
+            return None
+
+        return add_maps_mod_2(cur_anti_xs[1], result)
 
     return f, integrate
 
