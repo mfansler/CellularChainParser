@@ -154,10 +154,10 @@ id_x_Delta_Delta_id_Delta = add_maps_mod_2(id_x_Delta_Delta, Delta_x_id_Delta)
 print DELTA + "_c is co-associative?", not any(id_x_Delta_Delta_id_Delta.values())
 
 if any(id_x_Delta_Delta_id_Delta.values()):
-    print u"\n\n(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + " =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta_Delta_id_Delta.items() if v})
+    print u"\n(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + " =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta_Delta_id_Delta.items() if v})
 
-    factored_id_x_Delta_Delta_id_Delta = {k: factorize(v) for k, v in id_x_Delta_Delta_id_Delta.items()}
-    print factored_id_x_Delta_Delta_id_Delta
+    # factored_id_x_Delta_Delta_id_Delta = {k: factorize(v) for k, v in id_x_Delta_Delta_id_Delta.items()}
+    # print factored_id_x_Delta_Delta_id_Delta
 
 
 """
@@ -173,7 +173,7 @@ H_gens[2] = [['t_{1}', 't_{2}', 't_{3}', 't_{4}'], ['t_{5}', 't_{6}', 't_{7}', '
 #H_gens[3] = []
 
 H = {dim: ["h{}_{}".format(dim, i) for i, gen in enumerate(gens)] for dim, gens in H_gens.items()}
-print "H = H*(C) = ", H
+print "\nH = H*(C) = ", H
 
 
 """
@@ -588,6 +588,8 @@ exit()
 Delta_c3 = {k: integrate(vs) for k, vs in id_x_Delta_Delta_id_Delta.items()}
 print
 print DELTA + u"_C3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in Delta_c3.items() if v})
+
+exit()
 
 """
 COMPUTE DELTA3, g^3

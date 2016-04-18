@@ -135,6 +135,13 @@ Delta_x_id_Delta = {k: [l_cp + (r,) for (l, r) in v for l_cp in delta_c[l]] for 
 id_x_Delta_Delta_id_Delta = add_maps_mod_2(id_x_Delta_Delta, Delta_x_id_Delta)
 print DELTA + "_c is co-associative?", not any(id_x_Delta_Delta_id_Delta.values())
 
+if any(id_x_Delta_Delta_id_Delta.values()):
+    print u"\n(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + " =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta_Delta_id_Delta.items() if v})
+
+    # factored_id_x_Delta_Delta_id_Delta = {k: factorize(v) for k, v in id_x_Delta_Delta_id_Delta.items()}
+    # print factored_id_x_Delta_Delta_id_Delta
+
+
 """
 COMPUTE HOMOLOGY
 """
@@ -172,7 +179,7 @@ for n, k in enumerate(dims):
     offset += k + 1
 
 H = {dim: ["h{}_{}".format(dim, i) for i, gen in enumerate(gens)] for dim, gens in H_gens.items()}
-print "H = H*(C) = ", H
+print "\nH = H*(C) = ", H
 
 
 """
