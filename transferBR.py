@@ -154,7 +154,7 @@ print DELTA + "_c is co-associative?", not any(id_x_Delta_Delta_x_id_Delta.value
 
 if any(id_x_Delta_Delta_x_id_Delta.values()):
     print u"\n(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + " =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta_Delta_x_id_Delta.items() if v})
-
+    #print "(raw) =", id_x_Delta_Delta_x_id_Delta
     # factored_id_x_Delta_Delta_id_Delta = {k: factorize(v) for k, v in id_x_Delta_Delta_id_Delta.items()}
     # print factored_id_x_Delta_Delta_id_Delta
 
@@ -321,13 +321,19 @@ delta_c3_g = {k: [tp for v in vs if v in delta_c3 for tp in delta_c3[v]] for k, 
 print
 print DELTA + "_c3 g =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in delta_c3_g.items() if v})
 
-# phi_1 = (1 x Delta + Delta x 1) g^2 + (g x g^2 + g^2 x g) Delta_2
+# phi_1 = (1 x Delta + Delta x 1) g^2 + (g x g^2 + g^2 x g) Delta_2 + Delta_C3 g
 phi_1 = reduce(add_maps_mod_2, [g_x_g2_Delta2, g2_x_g_Delta2, id_x_Delta_g2, Delta_x_id_g2, delta_c3_g], {})
 print
 print PHI + u"_1 = (g " + OTIMES + " g^2 + g^2 " + OTIMES + " g) " + DELTA + "_2 +",
 print "(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) g^2 + " + DELTA + "_c3 =",
 print format_morphism({k: [format_tuple(t) for t in v] for k, v in phi_1.items() if v})
-print PHI + u"_1 (raw) =", phi_1
+#print PHI + u"_1 (raw) =", phi_1
+
+# Nabla phi_1 == 0 ? (Verify consistency)
+nabla_phi_1 = {k: [(l, m, r) for (l, m, r) in derivative(v, C) if l and m and r] for k, v in phi_1.items() if v}
+nabla_phi_1 = chain_map_mod(expand_map_all(nabla_phi_1))
+print
+print NABLA + PHI + u"_1 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in nabla_phi_1.items()})
 
 # factor phi_1
 factored_phi_1 = {k: factorize_cycles(v, C) for k, v in phi_1.items() if v}
@@ -347,6 +353,13 @@ print DELTA + u"_3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v
 gxgxg_delta3 = {k: [(g_l, g_m, g_r) for l, m, r in v for g_l in g[l] for g_m in g[m] for g_r in g[r]] for k, v in delta3.items()}
 print
 print u"(g " + OTIMES + " g " + OTIMES + " g)" + DELTA + "_3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in gxgxg_delta3.items()})
+
+# Nabla phi_1 == 0 ? (Verify consistency)
+nabla_gxgxg_delta3 = {k: [(l, m, r) for (l, m, r) in derivative(v, C) if l and m and r] for k, v in gxgxg_delta3.items() if v}
+nabla_gxgxg_delta3 = chain_map_mod(expand_map_all(nabla_gxgxg_delta3))
+print
+print NABLA + u"(g x g x g) " + DELTA + u"^3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in nabla_gxgxg_delta3.items()})
+
 
 # nabla g^3
 nabla_g3 = add_maps_mod_2(gxgxg_delta3, phi_1)
