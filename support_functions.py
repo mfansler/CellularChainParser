@@ -637,8 +637,8 @@ def main():
 
         BR_nabla_g3 = add_maps_mod_2(BR_gxgxg_delta3, BR_phi_1)
         print "\nNabla(g^3) =", BR_nabla_g3
-        BR_nable_g3_factored = {k: factorize_cycles(v, BR_C) for k, v in BR_nabla_g3.items()}
-        residual_delta3 = {k: [tuple(map(f_BR, list(t))) for t in tuples] for k, tuples in BR_nable_g3_factored.items()}
+        BR_nabla_g3_factored = {k: factorize_cycles(v, BR_C) for k, v in BR_nabla_g3.items()}
+        residual_delta3 = {k: [tuple(map(f_BR, list(t))) for t in tuples] for k, tuples in BR_nabla_g3_factored.items()}
         residual_delta3 = chain_map_mod(expand_map_all(residual_delta3))
 
         if any(residual_delta3.values()):
@@ -647,6 +647,44 @@ def main():
             BR_delta3 = add_maps_mod_2(BR_delta3, residual_delta3)
             print "\nDelta_3 =", BR_delta3
 
+    BR_nabla_nabla_g3 = {k: [(l, m, r) for (l, m, r) in derivative(v, BR_C) if l and m and r] for k, v in BR_nabla_g3.items() if v}
+    BR_nabla_nabla_g3 = chain_map_mod(expand_map_all(BR_nabla_nabla_g3))
+    print "\nNabla(Nabla(g^3)) =", BR_nabla_nabla_g3
+
+
+    print "\nNabla(g^3) factored =", BR_nabla_g3_factored
+    print "\nsums nabla(g^3) factored =", {k: len(tuples) for k, tuples in BR_nabla_g3_factored.items()}
+
+    f_binned_nabla_g3 = {}
+
+    for k, tuples in BR_nabla_g3_factored.items():
+        associated_by_f = {}
+        for t in tuples:
+            f_t = deep_freeze(tuple(map(f_BR, list(t))))
+            if f_t in associated_by_f:
+                associated_by_f[f_t].append(t)
+            else:
+                associated_by_f[f_t] = [t]
+        print associated_by_f
+        f_binned_nabla_g3[k] = associated_by_f.values()
+
+    print "\n"
+    print "\nNabla(g^3) binned by f =", f_binned_nabla_g3
+    print "\nsums nabla(g^3) binned =", {k: sum([len(tuples) for tuples in bins]) for k, bins in f_binned_nabla_g3.items()}
+
+    # Nabla phi_1 == 0 ? (Verify consistency)
+    nabla_f_binned_nabla_g3 = {k: [[(l, m, r) for (l, m, r) in derivative(tuples, BR_C) if l and m and r] for tuples in bins if tuples] for k, bins in f_binned_nabla_g3.items() if bins}
+    print "\nNabla(Nabla(g^3) binned by f) raw =", nabla_f_binned_nabla_g3
+
+    for k, bins in nabla_f_binned_nabla_g3.items():
+        bins_expanded = []
+        for tuples in bins:
+            tuples_expanded = [exp_t for t in tuples for exp_t in expand_tuple_list(t)]
+            bins_expanded.append(list_mod(tuples_expanded))
+        nabla_f_binned_nabla_g3[k] = bins_expanded
+    print "\nNabla(Nabla(g^3) binned by f) =", nabla_f_binned_nabla_g3
+
+    exit()
     BR_g3 = {k: integrate_BR(vs) for k, vs in BR_nabla_g3.items()}
     BR_g3 = chain_map_mod(expand_map_all(BR_g3))
     print "\ng^3 =", BR_g3
