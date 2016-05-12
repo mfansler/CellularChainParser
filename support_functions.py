@@ -83,7 +83,7 @@ def factorize(tps, C):
     def merge_adjacent_tuples(acc, tp):
         for i in range(len(acc)):
             idxs = tuple_diff_indices(acc[i], tp)
-            if len(idxs) == 1 and is_cycle(acc[i][idxs[0]] + tp[idxs[0]]):
+            if len(idxs) == 1 and is_cycle(list(acc[i][idxs[0]]) + list(tp[idxs[0]])):
                 tp_list = list(acc[i])
                 tp_list[idxs[0]] = combine_component(acc[i][idxs[0]], tp[idxs[0]])
                 acc[i] = tuple(tp_list)
@@ -555,6 +555,107 @@ def generate_f_integral(C, g):
     return f, integrate
 
 
+def group_integrate(group, C):
+
+    groups_inv = {cell: dim for dim, cells in C.groups.items() for cell in cells}
+    if not group:
+        return []
+
+    exp_group = [cell for chain in group for cell in expand_tuple_list(chain)]
+    dim = len(group[0])
+    sum_dimension = 0
+    for cell in group[0]:
+        if type(cell) is list and cell:
+            sum_dimension += groups_inv[cell[0]]
+        else:
+            sum_dimension += groups_inv[cell]
+
+    print sum_dimension
+
+    tallies = [{} for _ in range(dim)]
+    for chain in group:
+        for i in range(dim):
+            cur = chain[i]
+            if type(cur) is list:
+                for el in cur:
+                    if groups_inv[el] in tallies[i]:
+                        tallies[i][groups_inv[el]].append(el)
+                    else:
+                        tallies[i][groups_inv[el]] = [el]
+            else:
+                if groups_inv[cur] in tallies[i]:
+                    tallies[i][groups_inv[cur]].append(el)
+                else:
+                    tallies[i][groups_inv[cur]] = [cur]
+
+    tallies = [{i: set(vs) for i, vs in components.items()} for components in tallies]
+
+    #if all([len(tally) < 3 for tally in tallies]) and any([len(tally) > 1 for tally in tallies]):
+    if any([len(tally) > 1 for tally in tallies]):
+        # all possible anti-derivatives given the derivative chain
+        dim_indices = expand_tuple_list(tuple([tally.keys() for tally in tallies]))
+        dim_indices = [index for index in dim_indices if sum(index) == sum_dimension + 1]
+
+        anti_derivative_space = []
+        for index in dim_indices:
+            anti_derivative_space.append(tuple([list(tallies[i][index[i]]) for i in range(dim)]))
+
+        anti_derivative_space = [exp_tp for tp in anti_derivative_space for exp_tp in expand_tuple_list(tp)]
+        anti_derivative_space = list_mod(anti_derivative_space)
+        #anti_derivative_space = tuple([list(tally[max(tally.keys())]) for tally in tallies])
+        #anti_derivative_space = expand_tuple_list(anti_derivative_space)
+
+        num_cols = len(anti_derivative_space) + 1
+        num_rows = 0
+        entries = []
+        row_legend = {}
+
+        # iterate over possible components in anti-derivative space,
+        # creating a vector representation of their derivatives
+        for chain in anti_derivative_space:
+            entry = []
+            d_chain = [t for dx in derivative(chain, C) for t in expand_tuple_list(dx)]
+            d_chain = list_mod(d_chain)
+            for dx in d_chain:
+                frozen_dx = deep_freeze(dx)
+                if frozen_dx not in row_legend:
+                    row_legend[frozen_dx] = num_rows
+                    num_rows += 1
+                entry.append(row_legend[frozen_dx])
+            entries.append(sorted(list_mod(entry)))
+
+        # append the group to the entries
+        entries.append(sorted([row_legend[deep_freeze(chain)] for chain in list_mod(exp_group)]))
+
+        # create matrix
+        bd_mat = sp.lil_matrix((num_cols, num_rows), dtype=numpy.int8)
+        bd_mat.rows = entries
+        bd_mat.data = [[1]*len(row) for row in bd_mat.rows]
+        bd_mat = bd_mat.transpose()
+
+        # row reduce
+        rref_mat, rank = row_reduce_mod2(bd_mat, augment=1)
+
+        anti_derivative = []
+        solution = rref_mat.getcol(-1)
+        for nz in solution.nonzero()[0]:
+            leftmost_col = rref_mat.getrow(nz).nonzero()[1][0]
+            if leftmost_col == num_cols - 1:
+                break
+            anti_derivative.append(anti_derivative_space[leftmost_col])
+
+        full_derivative = [dx_tp for dx in derivative(anti_derivative, C) for dx_tp in expand_tuple_list(dx) if all(dx)]
+        full_derivative = list_mod(full_derivative)
+        if not list_mod(full_derivative + exp_group):
+            return anti_derivative
+        else:
+            print "\ngroup: ", group
+            print "proposed antiderivative: ", factorize(factorize_cycles(anti_derivative, C), C)
+            print "calculated derivative:", factorize(factorize_cycles(full_derivative, C), C)
+
+    return None
+
+
 def main():
 
     print "Expand Tuple List tests"
@@ -706,9 +807,19 @@ def main():
     print "\nsums nabla(g^3) factored =", {k: len(tuples) for k, tuples in BR_nabla_g3_factored.items()}
 
     BR_nabla_g3_boundary_groups = {k: group_boundary_chains(tuples, BR_C) for k, tuples in BR_nabla_g3_factored.items()}
+    BR_nabla_g3_boundary_groups = {k: [factorize(group, BR_C) for group in groups] for k, groups in BR_nabla_g3_boundary_groups.items()}
     print "\nNabla(g^3) boundary grouped =", BR_nabla_g3_boundary_groups
 
-    # verify that all bins are cycles
+    # check what the image of f map looks like
+    # we might need this for additional grouping
+    # for k, groups in BR_nabla_g3_boundary_groups.items():
+    #     print "\n", k, " :\n["
+    #     for group in groups:
+    #         for chain in group:
+    #             print "\t", tuple(map(f_BR, list(chain)))
+    #         print "]\n["
+
+    # verify that all groups are cycles
     BR_nabla_nabla_g3_boundary_groups = {}
 
     for k, groups in BR_nabla_g3_boundary_groups.items():
@@ -721,8 +832,18 @@ def main():
     print "\nNumber of groups:", {k: len(groups) for k, groups in BR_nabla_nabla_g3_boundary_groups.items()}
     print "\nAll groups are cycles? =", not any([any(vs) for vs in BR_nabla_nabla_g3_boundary_groups.values()])
 
-    BR_g3_grouped = {k: [integrate_BR(group) for group in groups] for k, groups in BR_nabla_g3_boundary_groups.items()}
-    print "\ng^3 =", BR_g3_grouped
+    BR_g3_grouped = {k: [] for k in BR_nabla_g3_boundary_groups.keys()}
+    BR_nabla_g3_grouped_remainder = {k: [] for k in BR_nabla_g3_boundary_groups.keys()}
+    for k, groups in BR_nabla_g3_boundary_groups.items():
+        for group in groups:
+            anti_group = group_integrate(group, BR_C)
+            if anti_group is None:
+                BR_nabla_g3_grouped_remainder[k].append(group)
+            else:
+                BR_g3_grouped[k].append(anti_group)
+
+    print "\ng^3 (partial)=", BR_g3_grouped
+    print "\nnabla(g^3) remainder:", BR_nabla_g3_grouped_remainder
     exit()
 
     BR_g3 = {k: integrate_BR(vs) for k, vs in BR_nabla_g3.items()}
