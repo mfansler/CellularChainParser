@@ -5,6 +5,7 @@ from collections import Counter
 from itertools import combinations, product
 from copy import deepcopy
 from random import shuffle
+from multiprocessing import Pool
 
 from Coalgebra import Coalgebra
 
@@ -269,6 +270,30 @@ def add_rows(A, r1, r2):
     #A.rows[r2] = sorted(list_mod(A.rows[r1] + A.rows[r2]))
     A.data[r2] = [1]*len(A.rows[r2])
 
+def parallel_row_sum((j, r1, r2)):
+    r1_plus_r2 = []
+    pos_r1 = 0
+    pos_r2 = 0
+
+    try:
+        while True:
+            if r1[pos_r1] < r2[pos_r2]:
+                r1_plus_r2.append(r1[pos_r1])
+                pos_r1 += 1
+            elif r1[pos_r1] > r2[pos_r2]:
+                r1_plus_r2.append(r2[pos_r2])
+                pos_r2 += 1
+            else:
+                pos_r1 += 1
+                pos_r2 += 1
+    except IndexError:
+        if pos_r1 == len(r1):
+            r1_plus_r2.extend(r2[pos_r2:])
+        elif pos_r2 == len(r2):
+            r1_plus_r2.extend(r1[pos_r1:])
+
+    return j, r1_plus_r2, [1]*len(r1_plus_r2)
+
 
 def row_reduce_mod2(A, augment=0):
 
@@ -278,31 +303,91 @@ def row_reduce_mod2(A, augment=0):
     A = A.tolil()
     A.data = [[x % 2 for x in xs] for xs in A.data]
     rank = 0
-
-    last_string = ""
+    row_range = range(A.shape[0])
+    p = Pool(5)
     for i in range(A.shape[1] - augment):
 
-        #nzs = A.getcol(i).nonzero()[0]
-        nzs = [j for j in range(A.shape[0]) if i in A.rows[j]]
-        upper_nzs = [nz for nz in nzs if nz < rank]
-        lower_nzs = [nz for nz in nzs if nz >= rank]
+        nzs = [(j, len(A.rows[j])) for j in row_range if i in A.rows[j]]
+        upper_nzs = [nz[0] for nz in nzs if nz[0] < rank]
+        lower_nzs = [nz for nz in nzs if nz[0] >= rank]
+
+        print "\rcolumn: {}; upper_nzs: {}; lower_nzs: {}".format(i, len(upper_nzs), len(lower_nzs)),
 
         if len(lower_nzs) > 0:
+            sparsest = min(lower_nzs, key=lambda nz: nz[1])
 
-            row_swap(A, rank, lower_nzs[0])
+            row_swap(A, rank, sparsest[0])
+            sum_jobs = []
+            for nz in [nz_pair[0] for nz_pair in lower_nzs if nz_pair != sparsest]:
 
-            for nz in lower_nzs[1:]:
-                add_rows(A, rank, nz)
+                if nz != rank:
+                    #add_rows(A, rank, nz)
+                    sum_jobs.append((nz, A.rows[rank], A.rows[nz]))
+                elif sparsest[0] != nz:
+                    #add_rows(A, rank, sparsest[0])
+                    sum_jobs.append((sparsest[0], A.rows[rank], A.rows[sparsest[0]]))
 
             if rank > 0:
                 for nz in upper_nzs:
-                    add_rows(A, rank, nz)
+                    #add_rows(A, rank, nz)
+                    sum_jobs.append((nz, A.rows[rank], A.rows[nz]))
+
+            for j, row_j, data_j in p.imap_unordered(parallel_row_sum, sum_jobs, chunksize=100):
+                A.rows[j] = row_j
+                A.data[j] = data_j
 
             rank += 1
 
-        print "\rcolumn: {}".format(i),
+    p.close()
+    p.terminate()
+    return A, rank
+
+
+def ref_mod2(A, augment=0):
+
+    if A.ndim != 2:
+        raise Exception("require two dimensional matrix input, found ", A.ndim)
+
+    A = A.tolil()
+    A.data = [[x % 2 for x in xs] for xs in A.data]
+    rank = 0
+    row_range = range(A.shape[0])
+
+    for i in range(A.shape[1] - augment):
+
+        lower_nzs = [(j, len(A.rows[j])) for j in row_range[rank:] if A.rows[j] and A.rows[j][0] == i]
+
+        print "\rcolumn: {}; num_lower_nonzero: {}".format(i, len(lower_nzs)),
+
+        if len(lower_nzs) > 0:
+            sparsest = min(lower_nzs, key=lambda nz: nz[1])
+
+            row_swap(A, rank, sparsest[0])
+            for nz in [nz_pair[0] for nz_pair in lower_nzs if nz_pair != sparsest]:
+
+                if nz != rank:
+                    add_rows(A, rank, nz)
+                elif sparsest[0] != nz:
+                    add_rows(A, rank, sparsest[0])
+
+            rank += 1
 
     return A, rank
+
+
+def backsubstitute_mod2(ref_mat, y):
+    x = []
+    nzs = y.nonzero()[0]
+    while nzs:
+        row_idx = nzs[-1]
+        col_idx = ref_mat.getrow(row_idx).nonzero()[1][0]
+        x.append(col_idx)
+
+        for i in ref_mat.getcol(col_idx).nonzero()[0]:
+            y[i] = (y[i] + 1) % 2
+        nzs = y.nonzero()[0]
+
+    return x
 
 
 def list_mod(ls, modulus=2):
@@ -736,6 +821,8 @@ def group_integrate(group, C):
 
 
 def main():
+
+    # test matrix ref and back substitute
 
     print "Expand Tuple List tests"
     print "([1], [1, 2]) = ", expand_tuple_list(([1], [1, 2]))
