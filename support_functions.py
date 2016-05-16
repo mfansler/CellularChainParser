@@ -378,13 +378,13 @@ def ref_mod2(A, augment=0):
 def backsubstitute_mod2(ref_mat, y):
     x = []
     nzs = y.nonzero()[0]
-    while nzs:
+    while len(nzs) > 0:
         row_idx = nzs[-1]
         col_idx = ref_mat.getrow(row_idx).nonzero()[1][0]
         x.append(col_idx)
 
         for i in ref_mat.getcol(col_idx).nonzero()[0]:
-            y[i] = (y[i] + 1) % 2
+            y[i, 0] = (y[i, 0] + 1) % 2
         nzs = y.nonzero()[0]
 
     return x
@@ -823,6 +823,22 @@ def group_integrate(group, C):
 def main():
 
     # test matrix ref and back substitute
+    # create matrix
+    test_mat = sp.lil_matrix((3, 5), dtype=numpy.int8)
+    test_mat.rows = [[0, 1, 4], [1, 3, 4], [0, 2, 3]]
+    test_mat.data = [[1]*len(row) for row in test_mat.rows]
+
+    # row echelon form
+    test_mat_ref, rank = ref_mod2(test_mat, augment=1)
+
+    sol = backsubstitute_mod2(test_mat_ref[:, :-1], test_mat_ref.getcol(-1))
+    print "\nx =", sol
+    colsum = sp.lil_matrix((3,1), dtype=numpy.int8)
+    for n in sol:
+        colsum += test_mat[:, n]
+    print "\noriginal =\n", test_mat[:, -1].toarray()
+    print "\nsum of columns =\n", mat_mod2(colsum.toarray())
+    exit()
 
     print "Expand Tuple List tests"
     print "([1], [1, 2]) = ", expand_tuple_list(([1], [1, 2]))
