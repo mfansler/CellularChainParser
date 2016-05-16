@@ -2,7 +2,7 @@ import numpy
 import scipy.sparse as sp
 
 from collections import Counter
-from itertools import combinations
+from itertools import combinations, product
 from copy import deepcopy
 from random import shuffle
 
@@ -244,7 +244,29 @@ def mat_mod2(A):
 
 
 def add_rows(A, r1, r2):
-    A.rows[r2] = sorted(list_mod(A.rows[r1] + A.rows[r2]))
+    r1_plus_r2 = []
+    pos_r1 = 0
+    pos_r2 = 0
+
+    try:
+        while True:
+            if A.rows[r1][pos_r1] < A.rows[r2][pos_r2]:
+                r1_plus_r2.append(A.rows[r1][pos_r1])
+                pos_r1 += 1
+            elif A.rows[r1][pos_r1] > A.rows[r2][pos_r2]:
+                r1_plus_r2.append(A.rows[r2][pos_r2])
+                pos_r2 += 1
+            else:
+                pos_r1 += 1
+                pos_r2 += 1
+    except IndexError:
+        if pos_r1 == len(A.rows[r1]):
+            r1_plus_r2.extend(A.rows[r2][pos_r2:])
+        elif pos_r2 == len(A.rows[r2]):
+            r1_plus_r2.extend(A.rows[r1][pos_r1:])
+
+    A.rows[r2] = r1_plus_r2
+    #A.rows[r2] = sorted(list_mod(A.rows[r1] + A.rows[r2]))
     A.data[r2] = [1]*len(A.rows[r2])
 
 
@@ -256,9 +278,12 @@ def row_reduce_mod2(A, augment=0):
     A = A.tolil()
     A.data = [[x % 2 for x in xs] for xs in A.data]
     rank = 0
+
+    last_string = ""
     for i in range(A.shape[1] - augment):
 
-        nzs = A.getcol(i).nonzero()[0]
+        #nzs = A.getcol(i).nonzero()[0]
+        nzs = [j for j in range(A.shape[0]) if i in A.rows[j]]
         upper_nzs = [nz for nz in nzs if nz < rank]
         lower_nzs = [nz for nz in nzs if nz >= rank]
 
@@ -274,6 +299,8 @@ def row_reduce_mod2(A, augment=0):
                     add_rows(A, rank, nz)
 
             rank += 1
+
+        print "\rcolumn: {}".format(i),
 
     return A, rank
 
@@ -563,14 +590,11 @@ def group_integrate(group, C):
 
     exp_group = [cell for chain in group for cell in expand_tuple_list(chain)]
     dim = len(group[0])
-    sum_dimension = 0
-    for cell in group[0]:
-        if type(cell) is list and cell:
-            sum_dimension += groups_inv[cell[0]]
-        else:
-            sum_dimension += groups_inv[cell]
 
-    print sum_dimension
+    dim_indices = set([tuple([groups_inv[cell] for cell in chain]) for chain in exp_group])
+    anti_dim_indices = set([index[:i] + (index[i] + 1,) + index[i+1:] for index in dim_indices for i in range(dim)])
+
+    sum_dimension = sum(next(iter(dim_indices)))
 
     tallies = [{} for _ in range(dim)]
     for chain in group:
@@ -589,8 +613,63 @@ def group_integrate(group, C):
                     tallies[i][groups_inv[cur]] = [cur]
 
     tallies = [{i: set(vs) for i, vs in components.items()} for components in tallies]
+    if any([len(tally) > 2 for tally in tallies]):
 
-    #if all([len(tally) < 3 for tally in tallies]) and any([len(tally) > 1 for tally in tallies]):
+        anti_derivative_space = []
+        for index in anti_dim_indices:
+            anti_derivative_space += expand_tuple_list(tuple([C.groups[i] for i in index]))
+        anti_derivative_space = list_mod(anti_derivative_space)
+
+        num_cols = len(anti_derivative_space) + 1
+        num_rows = 0
+        entries = []
+        row_legend = {}
+
+        # iterate over possible components in anti-derivative space,
+        # creating a vector representation of their derivatives
+        for chain in anti_derivative_space:
+            entry = []
+            d_chain = [t for dx in derivative(chain, C) for t in expand_tuple_list(dx)]
+            d_chain = list_mod(d_chain)
+            for dx in d_chain:
+                frozen_dx = deep_freeze(dx)
+                if frozen_dx not in row_legend:
+                    row_legend[frozen_dx] = num_rows
+                    num_rows += 1
+                entry.append(row_legend[frozen_dx])
+            entries.append(sorted(list_mod(entry)))
+
+        # append the group to the entries
+        entries.append(sorted([row_legend[deep_freeze(chain)] for chain in list_mod(exp_group)]))
+
+        # create matrix
+        bd_mat = sp.lil_matrix((num_cols, num_rows), dtype=numpy.int8)
+        bd_mat.rows = entries
+        bd_mat.data = [[1]*len(row) for row in bd_mat.rows]
+        bd_mat = bd_mat.transpose()
+
+        # row reduce
+        rref_mat, rank = row_reduce_mod2(bd_mat, augment=1)
+
+        anti_derivative = []
+        solution = rref_mat.getcol(-1)
+        for nz in solution.nonzero()[0]:
+            leftmost_col = rref_mat.getrow(nz).nonzero()[1][0]
+            if leftmost_col == num_cols - 1:
+                break
+            anti_derivative.append(anti_derivative_space[leftmost_col])
+
+        full_derivative = [dx_tp for dx in derivative(anti_derivative, C) for dx_tp in expand_tuple_list(dx) if all(dx)]
+        full_derivative = list_mod(full_derivative)
+        if not list_mod(full_derivative + exp_group):
+            return anti_derivative
+        else:
+            print "\ngroup: ", group
+            print "proposed antiderivative: ", factorize(factorize_cycles(anti_derivative, C), C)
+            print "calculated derivative:", factorize(factorize_cycles(full_derivative, C), C)
+
+        return None
+
     if any([len(tally) > 1 for tally in tallies]):
         # all possible anti-derivatives given the derivative chain
         dim_indices = expand_tuple_list(tuple([tally.keys() for tally in tallies]))
