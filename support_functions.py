@@ -352,26 +352,36 @@ def ref_mod2(A, augment=0):
     A.data = [[x % 2 for x in xs] for xs in A.data]
     rank = 0
     row_range = range(A.shape[0])
+    p = Pool(4)
 
     for i in range(A.shape[1] - augment):
 
         lower_nzs = [(j, len(A.rows[j])) for j in row_range[rank:] if A.rows[j] and A.rows[j][0] == i]
 
-        print "\rcolumn: {}; num_lower_nonzero: {}".format(i, len(lower_nzs)),
+        print "\rcolumn: {}; num_lower_nonzero: {}; reducible: {}".format(i, len(lower_nzs), i - rank),
 
         if len(lower_nzs) > 0:
             sparsest = min(lower_nzs, key=lambda nz: nz[1])
 
             row_swap(A, rank, sparsest[0])
+            sum_jobs = []
             for nz in [nz_pair[0] for nz_pair in lower_nzs if nz_pair != sparsest]:
 
                 if nz != rank:
-                    add_rows(A, rank, nz)
+                    #add_rows(A, rank, nz)
+                    sum_jobs.append((nz, A.rows[rank], A.rows[nz]))
                 elif sparsest[0] != nz:
-                    add_rows(A, rank, sparsest[0])
+                    sum_jobs.append((sparsest[0], A.rows[rank], A.rows[sparsest[0]]))
+                    #add_rows(A, rank, sparsest[0])
+
+            for j, row_j, data_j in p.imap_unordered(parallel_row_sum, sum_jobs, chunksize=100):
+                A.rows[j] = row_j
+                A.data[j] = data_j
 
             rank += 1
 
+    p.close()
+    p.terminate()
     return A, rank
 
 
@@ -734,15 +744,17 @@ def group_integrate(group, C):
         bd_mat = bd_mat.transpose()
 
         # row reduce
-        rref_mat, rank = row_reduce_mod2(bd_mat, augment=1)
+        #rref_mat, rank = row_reduce_mod2(bd_mat, augment=1)
+        ref_mat, rank = ref_mod2(bd_mat, augment=1)
 
-        anti_derivative = []
-        solution = rref_mat.getcol(-1)
-        for nz in solution.nonzero()[0]:
-            leftmost_col = rref_mat.getrow(nz).nonzero()[1][0]
-            if leftmost_col == num_cols - 1:
-                break
-            anti_derivative.append(anti_derivative_space[leftmost_col])
+        anti_derivative = backsubstitute_mod2(ref_mat[:, :-1], ref_mat[:, -1])
+        anti_derivative = [anti_derivative_space[col] for col in anti_derivative]
+        # solution = rref_mat.getcol(-1)
+        # for nz in solution.nonzero()[0]:
+        #     leftmost_col = rref_mat.getrow(nz).nonzero()[1][0]
+        #     if leftmost_col == num_cols - 1:
+        #         break
+        #     anti_derivative.append(anti_derivative_space[leftmost_col])
 
         full_derivative = [dx_tp for dx in derivative(anti_derivative, C) for dx_tp in expand_tuple_list(dx) if all(dx)]
         full_derivative = list_mod(full_derivative)
@@ -798,15 +810,10 @@ def group_integrate(group, C):
         bd_mat = bd_mat.transpose()
 
         # row reduce
-        rref_mat, rank = row_reduce_mod2(bd_mat, augment=1)
+        ref_mat, rank = ref_mod2(bd_mat, augment=1)
 
-        anti_derivative = []
-        solution = rref_mat.getcol(-1)
-        for nz in solution.nonzero()[0]:
-            leftmost_col = rref_mat.getrow(nz).nonzero()[1][0]
-            if leftmost_col == num_cols - 1:
-                break
-            anti_derivative.append(anti_derivative_space[leftmost_col])
+        anti_derivative = backsubstitute_mod2(ref_mat[:, :-1], ref_mat[:, -1])
+        anti_derivative = [anti_derivative_space[col] for col in anti_derivative]
 
         full_derivative = [dx_tp for dx in derivative(anti_derivative, C) for dx_tp in expand_tuple_list(dx) if all(dx)]
         full_derivative = list_mod(full_derivative)
@@ -838,7 +845,7 @@ def main():
         colsum += test_mat[:, n]
     print "\noriginal =\n", test_mat[:, -1].toarray()
     print "\nsum of columns =\n", mat_mod2(colsum.toarray())
-    exit()
+
 
     print "Expand Tuple List tests"
     print "([1], [1, 2]) = ", expand_tuple_list(([1], [1, 2]))
@@ -1017,11 +1024,13 @@ def main():
     BR_g3_grouped = {k: [] for k in BR_nabla_g3_boundary_groups.keys()}
     BR_nabla_g3_grouped_remainder = {k: [] for k in BR_nabla_g3_boundary_groups.keys()}
     for k, groups in BR_nabla_g3_boundary_groups.items():
-        for group in groups:
+        for group in reversed(groups):
             anti_group = group_integrate(group, BR_C)
             if anti_group is None:
                 BR_nabla_g3_grouped_remainder[k].append(group)
             else:
+                print "\n\nanti(", group, ") = "
+                print "\t", factorize_cycles(anti_group, BR_C)
                 BR_g3_grouped[k].append(anti_group)
 
     print "\ng^3 (partial)=", BR_g3_grouped
