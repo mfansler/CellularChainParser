@@ -453,7 +453,32 @@ def backsubstitute_mod2(ref_mat):
 def select_basis(A):
     cols = []
     rank = 0
-    row_red_op = "turple"
+    row_red_op = sp.eye(A.shape[0])
+    row_red_op = row_red_op.tolil()
+    for i in range(A.shape[1]):
+        c = mat_mod2(row_red_op.dot(A.getcol(i)))
+
+        nzs = c.nonzero()[0]
+        upper_nzs = [j for j in nzs if j < rank]
+        lower_nzs = [j for j in nzs if j >= rank]
+
+        if len(lower_nzs) > 0:
+            cols.append(i)
+
+            if rank != lower_nzs[0]:
+                row_swap(row_red_op, rank, lower_nzs[0])
+
+            lower_nzs.pop(0)
+
+            for j in lower_nzs:
+                add_rows(row_red_op, rank, j)
+
+            for j in upper_nzs:
+                add_rows(row_red_op, rank, j)
+
+            rank += 1
+
+    return cols, row_red_op, rank
 
 
 def list_mod(ls, modulus=2):
@@ -925,6 +950,20 @@ def main():
     print "\noriginal =\n", test_mat[:, -1].toarray()
     print "\nsum of columns =\n", mat_mod2(colsum.toarray())
 
+    ########
+    #
+    # Select basis tests
+    #
+    ########
+
+    cols, rr_test_mat, rank = select_basis(test_mat)
+
+    print "\nSelect basis: rank =", rank
+    print "columns:", cols
+    print mat_mod2(rr_test_mat.dot(test_mat.getcol(-1))).toarray()
+    print
+
+    #######################
 
     print "Expand Tuple List tests"
     print "([1], [1, 2]) = ", expand_tuple_list(([1], [1, 2]))
