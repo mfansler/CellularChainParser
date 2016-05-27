@@ -270,6 +270,7 @@ def add_rows(A, r1, r2):
     #A.rows[r2] = sorted(list_mod(A.rows[r1] + A.rows[r2]))
     A.data[r2] = [1]*len(A.rows[r2])
 
+
 def parallel_row_sum((j, r1, r2)):
     r1_plus_r2 = []
     pos_r1 = 0
@@ -300,20 +301,34 @@ def row_reduce_mod2(A, augment=0):
     if A.ndim != 2:
         raise Exception("require two dimensional matrix input, found ", A.ndim)
 
+    # convert to lil matrix for efficient reduction
     A = A.tolil()
+
+    # make sure everything is mod 2
     A.data = [[x % 2 for x in xs] for xs in A.data]
+
+    # rank = the num of independent columns found so far
     rank = 0
+
+    # this is used repeatedly, so makes sense to generate it only once
     row_range = range(A.shape[0])
-    p = Pool(5)
+
+    # multithreading worker pool for computing row sums
+    p = Pool(4)
+
     for i in range(A.shape[1] - augment):
 
+        # identify all rows with nonzero entries in i-th column
+        # only those rows below the nonzero rows of the independent cols are independent
         nzs = [(j, len(A.rows[j])) for j in row_range if i in A.rows[j]]
         upper_nzs = [nz[0] for nz in nzs if nz[0] < rank]
         lower_nzs = [nz for nz in nzs if nz[0] >= rank]
 
-        print "\rcolumn: {}; upper_nzs: {}; lower_nzs: {}".format(i, len(upper_nzs), len(lower_nzs)),
+        # progess information
+        print "\rcolumn: {}/{}; num_lower_nonzero: {}; reducible: {}".format(i, A.shape[1], len(lower_nzs), i - rank),
 
         if len(lower_nzs) > 0:
+            # the sparsest will be used
             sparsest = min(lower_nzs, key=lambda nz: nz[1])
 
             row_swap(A, rank, sparsest[0])
@@ -321,25 +336,28 @@ def row_reduce_mod2(A, augment=0):
             for nz in [nz_pair[0] for nz_pair in lower_nzs if nz_pair != sparsest]:
 
                 if nz != rank:
-                    #add_rows(A, rank, nz)
+                    # if not from the rank position, then it hasn't moved
                     sum_jobs.append((nz, A.rows[rank], A.rows[nz]))
                 elif sparsest[0] != nz:
-                    #add_rows(A, rank, sparsest[0])
+                    # if it was in the rank row, and it was moved
+                    # the main this is, we don't want to add the rank row to itself
                     sum_jobs.append((sparsest[0], A.rows[rank], A.rows[sparsest[0]]))
 
             if rank > 0:
                 for nz in upper_nzs:
-                    #add_rows(A, rank, nz)
                     sum_jobs.append((nz, A.rows[rank], A.rows[nz]))
 
+            # doesn't matter what order they are done in
             for j, row_j, data_j in p.imap_unordered(parallel_row_sum, sum_jobs, chunksize=100):
                 A.rows[j] = row_j
                 A.data[j] = data_j
 
             rank += 1
 
+    # clean up the pool
     p.close()
     p.terminate()
+
     return A, rank
 
 
@@ -348,56 +366,94 @@ def ref_mod2(A, augment=0):
     if A.ndim != 2:
         raise Exception("require two dimensional matrix input, found ", A.ndim)
 
+    # convert to lil matrix for efficient reduction
     A = A.tolil()
+
+    # make sure everything is mod 2
     A.data = [[x % 2 for x in xs] for xs in A.data]
+
+    # rank = the num of independent columns found so far
     rank = 0
+
+    # this is used repeatedly, so makes sense to generate it only once
     row_range = range(A.shape[0])
+
+    # multithreading worker pool for computing row sums
     p = Pool(4)
 
     for i in range(A.shape[1] - augment):
 
+        # only consider lower nonzeros, and only have to check first element in each row
         lower_nzs = [(j, len(A.rows[j])) for j in row_range[rank:] if A.rows[j] and A.rows[j][0] == i]
 
-        print "\rcolumn: {}; num_lower_nonzero: {}; reducible: {}".format(i, len(lower_nzs), i - rank),
+        # print some info on progress
+        print "\rcolumn: {}/{}; num_lower_nonzero: {}; reducible: {}".format(i, A.shape[1], len(lower_nzs), i - rank),
 
         if len(lower_nzs) > 0:
+            # select the sparsest row to serve as representative
+            # in order to minimize accumulation of nonzeros in matrix
             sparsest = min(lower_nzs, key=lambda nz: nz[1])
-
             row_swap(A, rank, sparsest[0])
+
+            # work queue
             sum_jobs = []
+
             for nz in [nz_pair[0] for nz_pair in lower_nzs if nz_pair != sparsest]:
 
                 if nz != rank:
-                    #add_rows(A, rank, nz)
+                    # if not from the rank position, then it hasn't moved
                     sum_jobs.append((nz, A.rows[rank], A.rows[nz]))
                 elif sparsest[0] != nz:
+                    # if it was in the rank row, and it was moved
+                    # the main this is, we don't want to add the rank row to itself
                     sum_jobs.append((sparsest[0], A.rows[rank], A.rows[sparsest[0]]))
-                    #add_rows(A, rank, sparsest[0])
 
+            # carry out sums
             for j, row_j, data_j in p.imap_unordered(parallel_row_sum, sum_jobs, chunksize=100):
                 A.rows[j] = row_j
                 A.data[j] = data_j
 
             rank += 1
 
+    print "finished, now cleaning up"
+    # clean up the pool
     p.close()
     p.terminate()
+
     return A, rank
 
 
-def backsubstitute_mod2(ref_mat, y):
+def backsubstitute_mod2(ref_mat):
+    # assumes that last column is the y column
+    print "Back-substitution"
+    # solution for (ref_mat[:,:-1]) * (x) = (ref_mat[:,-1])
     x = []
-    nzs = y.nonzero()[0]
+
+    # all nzs remaining
+    nzs = ref_mat.getcol(-1).nonzero()[0]
+    nzs = nzs.tolist()
+
     while len(nzs) > 0:
+        print "\rlen(y) = {}; len(x) = {}".format(len(nzs), len(x)),
+
         row_idx = nzs[-1]
         col_idx = ref_mat.getrow(row_idx).nonzero()[1][0]
         x.append(col_idx)
 
         for i in ref_mat.getcol(col_idx).nonzero()[0]:
-            y[i, 0] = (y[i, 0] + 1) % 2
-        nzs = y.nonzero()[0]
+            if i in nzs:
+                nzs.remove(i)
+            else:
+                nzs.append(i)
+        nzs.sort()
 
     return x
+
+
+def select_basis(A):
+    cols = []
+    rank = 0
+    row_red_op = "turple"
 
 
 def list_mod(ls, modulus=2):
@@ -677,6 +733,18 @@ def generate_f_integral(C, g):
     return f, integrate
 
 
+def matrix_reorder_rows_by_sparsity(A):
+
+    ordering = sorted([(i, len(r), sum(r)) for i, r in enumerate(A.rows)], key=lambda (j, l, s): (l, s))
+
+    B = sp.lil_matrix(A.shape, dtype=numpy.int8)
+    for i in range(len(A.rows)):
+        B.rows[i] = A.rows[ordering[i][0]]
+        B.data[i] = A.data[ordering[i][0]]
+
+    return B, {b_idx: a_idx for b_idx, (a_idx, _, _) in enumerate(ordering)}
+
+
 def group_integrate(group, C):
 
     groups_inv = {cell: dim for dim, cells in C.groups.items() for cell in cells}
@@ -734,21 +802,32 @@ def group_integrate(group, C):
                 entry.append(row_legend[frozen_dx])
             entries.append(sorted(list_mod(entry)))
 
-        # append the group to the entries
-        entries.append(sorted([row_legend[deep_freeze(chain)] for chain in list_mod(exp_group)]))
+        # include a temp dummy row
+        entries.append(list(range(num_rows)))
+
+        #entries.append(sorted([row_legend[deep_freeze(chain)] for chain in list_mod(exp_group)]))
 
         # create matrix
         bd_mat = sp.lil_matrix((num_cols, num_rows), dtype=numpy.int8)
         bd_mat.rows = entries
         bd_mat.data = [[1]*len(row) for row in bd_mat.rows]
+
+        bd_mat, reordered_map = matrix_reorder_rows_by_sparsity(bd_mat)
+
+        # replace the dummy row
+        bd_mat.rows[-1] = sorted([row_legend[deep_freeze(chain)] for chain in list_mod(exp_group)])
+        bd_mat.data[-1] = [1]*len(bd_mat.rows[-1])
+
+        # transpose the matrix
         bd_mat = bd_mat.transpose()
 
         # row reduce
         #rref_mat, rank = row_reduce_mod2(bd_mat, augment=1)
         ref_mat, rank = ref_mod2(bd_mat, augment=1)
+        print "reduced to row echelon form with rank", rank
 
-        anti_derivative = backsubstitute_mod2(ref_mat[:, :-1], ref_mat[:, -1])
-        anti_derivative = [anti_derivative_space[col] for col in anti_derivative]
+        anti_derivative = backsubstitute_mod2(ref_mat)
+        anti_derivative = [anti_derivative_space[reordered_map[col]] for col in anti_derivative]
         # solution = rref_mat.getcol(-1)
         # for nz in solution.nonzero()[0]:
         #     leftmost_col = rref_mat.getrow(nz).nonzero()[1][0]
@@ -812,7 +891,7 @@ def group_integrate(group, C):
         # row reduce
         ref_mat, rank = ref_mod2(bd_mat, augment=1)
 
-        anti_derivative = backsubstitute_mod2(ref_mat[:, :-1], ref_mat[:, -1])
+        anti_derivative = backsubstitute_mod2(ref_mat)
         anti_derivative = [anti_derivative_space[col] for col in anti_derivative]
 
         full_derivative = [dx_tp for dx in derivative(anti_derivative, C) for dx_tp in expand_tuple_list(dx) if all(dx)]
@@ -838,7 +917,7 @@ def main():
     # row echelon form
     test_mat_ref, rank = ref_mod2(test_mat, augment=1)
 
-    sol = backsubstitute_mod2(test_mat_ref[:, :-1], test_mat_ref.getcol(-1))
+    sol = backsubstitute_mod2(test_mat_ref)
     print "\nx =", sol
     colsum = sp.lil_matrix((3,1), dtype=numpy.int8)
     for n in sol:
