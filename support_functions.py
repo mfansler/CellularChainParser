@@ -361,7 +361,7 @@ def row_reduce_mod2(A, augment=0):
     return A, rank
 
 
-def ref_mod2(A, augment=0):
+def ref_mod2(A, augment=0, eliminate=True):
 
     if A.ndim != 2:
         raise Exception("require two dimensional matrix input, found ", A.ndim)
@@ -415,6 +415,13 @@ def ref_mod2(A, augment=0):
 
             rank += 1
 
+        elif eliminate:
+            for j in range(rank):
+                if i in A.rows[j]:
+                    A.rows[j].remove(i)
+                    A.data[j].pop()
+
+
     print "finished, now cleaning up"
     # clean up the pool
     p.close()
@@ -450,17 +457,39 @@ def backsubstitute_mod2(ref_mat):
     return x
 
 
+def dot_mod2(A, x):
+    # NOTE: assumes lil matrix
+
+    y = []
+    nzs = x.nonzero()[0]
+    nzs = set(nzs)
+
+    for i, r in enumerate(A.rows):
+
+        if len(nzs.intersection(set(r))) % 2:
+            y.append(i)
+
+    # returns a list of all nonzero entries in product
+    return y
+
+
 def select_basis(A):
     cols = []
     rank = 0
+    A = A.tocsc()
     row_red_op = sp.eye(A.shape[0])
     row_red_op = row_red_op.tolil()
-    for i in range(A.shape[1]):
-        c = mat_mod2(row_red_op.dot(A.getcol(i)))
 
-        nzs = c.nonzero()[0]
+    for i in range(A.shape[1]):
+        #c = mat_mod2(row_red_op.dot(A.getcol(i)))
+
+        #nzs = c.nonzero()[0]
+        nzs = dot_mod2(row_red_op, A.getcol(i))
         upper_nzs = [j for j in nzs if j < rank]
         lower_nzs = [j for j in nzs if j >= rank]
+
+        # print some info on progress
+        print "\rcolumn: {}/{}; num_lower_nonzero: {}; reducible: {}".format(i, A.shape[1], len(lower_nzs), i - rank),
 
         if len(lower_nzs) > 0:
             cols.append(i)
@@ -845,6 +874,10 @@ def group_integrate(group, C):
 
         # transpose the matrix
         bd_mat = bd_mat.transpose()
+
+        #cols, rr_op_mat, rank = select_basis(bd_mat)
+
+        #sol = mat_mod2(rr_op_mat.dot(bd_mat.getcol(-1))).nonzero()[0]
 
         # row reduce
         #rref_mat, rank = row_reduce_mod2(bd_mat, augment=1)
