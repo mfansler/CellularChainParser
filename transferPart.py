@@ -10,6 +10,10 @@ from collections import Counter
 
 import numpy
 
+import sys
+import codecs
+sys.stdout=codecs.getwriter('utf-8')(sys.stdout)
+
 # Local imports
 import CellChainParse
 from Coalgebra import Coalgebra
