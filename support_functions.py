@@ -25,7 +25,7 @@ def expand_tuple_list(tp):
 
 
 def expand_map_all(xs):
-    return {k: [tp for v in vs for tp in expand_tuple_list(v)] for k, vs in xs.items() if vs}
+    return {k: [tp for v in vs for tp in expand_tuple_list(v)] for k, vs in xs.iteritems() if vs}
 
 
 def deep_freeze(x):
@@ -531,11 +531,18 @@ def list_mod(ls, modulus=2):
 
 
 def chain_map_mod(xs, modulus=2):
-    return {k: list_mod(ls, modulus=2) for k, ls in xs.items()}
+    return {k: list_mod(ls, modulus=modulus) for k, ls in xs.items()}
 
 
 def facet_to_cells(facet, C):
-    return [face for face, facets in C.differential.items() if facet in facets and facets[facet] % 2]
+    """
+    Function to obtain a list of cells that a given cell is facet of.
+
+    :param facet: cell from cell complex
+    :param C: Coalgebra with cell complex that facet is in
+    :return: a list of all cells in the complex for which the given cell is a facet
+    """
+    return {face for face, facets in C.differential.iteritems() if facet in facets and facets[facet] % 2}
 
 
 def derivative(x, C):
@@ -981,26 +988,6 @@ def group_integrate(group, C):
 
 
 def main():
-
-    # test matrix ref and back substitute
-    # create matrix
-    test_mat = sp.lil_matrix((3, 5), dtype=numpy.int8)
-    test_mat.rows = [[0, 1, 4], [1, 3, 4], [0, 2, 3]]
-    test_mat.data = [[1]*len(row) for row in test_mat.rows]
-
-    # row echelon form
-    test_mat_ref, rank = ref_mod2(test_mat, augment=1)
-
-    sol = backsubstitute_mod2(test_mat_ref)
-    print "\nx =", sol
-    colsum = sp.lil_matrix((3,1), dtype=numpy.int8)
-    for n in sol:
-        colsum += test_mat[:, n]
-    print "\noriginal =\n", test_mat[:, -1].toarray()
-    print "\nsum of columns =\n", mat_mod2(colsum.toarray())
-
-
-    #######################
 
     # test data toy
     DGC = Coalgebra(
