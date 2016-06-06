@@ -3,7 +3,7 @@ from subprocess import check_output, CalledProcessError
 from os import remove as rm
 
 from re import sub, compile
-from argparse import ArgumentParser
+from argparse import ArgumentParser, FileType
 
 from itertools import product
 from collections import Counter
@@ -18,47 +18,11 @@ sys.stdout=codecs.getwriter('utf-8')(sys.stdout)
 import CellChainParse
 from Coalgebra import Coalgebra
 from factorize import factorize
-from support_functions import generate_f_integral, list_mod, add_maps_mod_2, derivative, expand_tuple_list
+from support_functions import *
+from formatting import *
 
 __author__ = 'mfansler'
 temp_mat = "~transfer-temp.mat"
-
-# chars
-DELTA   = u"\u0394"
-PARTIAL = u"\u2202"
-NABLA   = u"\u2207"
-OTIMES  = u"\u2297"
-CHAINPARTIAL = "(1" + OTIMES + PARTIAL + " + " + PARTIAL + OTIMES + "1)"
-THETA = u"\u03b8"
-PHI = u"\u03c6"
-
-
-def format_cells(cells):
-    return sub(',', '_', sub(r'[{}]', '', str(cells)))
-
-
-def format_tuple(t):
-    if type(t) is tuple:
-        return u" \u2297 ".join([format_sum(el) for el in t])
-    else:
-        return unicode(t)
-
-
-def format_sum(obj):
-    if obj is None:
-        return "0"
-    if type(obj) is dict:
-        single = [format_tuple(k) for k, v in obj.items() if v == 1]
-        multiple = [u"{}*({})".format(v, format_tuple(k)) for k, v in obj.items() if v > 1]
-        return u" + ".join(single + multiple)
-    if type(obj) is list:
-        return u" + ".join([format_tuple(o) for o in obj])
-
-    return obj
-
-
-def format_morphism(m):
-    return u"\n\t+ ".join([u"{}{}_{{{}}}".format(format_morphism(v) if type(v) is dict else '(' + format_sum(v) + ')', PARTIAL, k) for k, v in m.items()])
 
 
 def compare_incidences(x, y):
@@ -100,6 +64,7 @@ def hom_dim(h_element):
 
 
 argparser = ArgumentParser(description="Computes induced coproduct on homology")
+argparser.add_argument('--hgroups', '-hg', dest='homology_groups', type=FileType('r'), help="File containing homology groups")
 argparser.add_argument('file', type=file, help="LaTeX file to be parsed")
 args = None
 
@@ -122,26 +87,32 @@ if not result:
 
 # construct coalgebra
 C = Coalgebra(result["groups"], result["differentials"], result["coproducts"])
-differential = {n: C.incidence_matrix(n, sparse=False) for n in range(1, C.topDimension() + 1)}
-delta_c = {k: [c for c, i in v.items() if i % 2] for k, v in C.coproduct.items()}
+
+# convert coproduct to map form
+delta_c = {}
+for from_cell, to_cells in C.coproduct.iteritems():
+    delta_c[from_cell] = [cell for cell, count in to_cells.iteritems() if count % 2]
 
 """
-Checking Coassociativity on Delta_C
+Check Coassociativity on Delta_C
 """
 
 # (1 x Delta) Delta
-id_x_Delta_Delta = {k: [(l,) + r_cp for (l, r) in v for r_cp in delta_c[r]] for k, v in delta_c.items()}
+id_x_Delta_Delta = {}
+for c, cxc in delta_c.iteritems():
+    id_x_Delta_Delta[c] = [(l,) + r_cp for (l, r) in cxc for r_cp in delta_c[r]]
 
 # (Delta x 1) Delta
 Delta_x_id_Delta = {k: [l_cp + (r,) for (l, r) in v for l_cp in delta_c[l]] for k, v in delta_c.items()}
 
 # DeltaC = (1 x Delta_C + Delta_C x 1) Delta_C
-id_x_Delta_Delta_id_Delta = add_maps_mod_2(id_x_Delta_Delta, Delta_x_id_Delta)
-print DELTA + "_c is co-associative?", not any(id_x_Delta_Delta_id_Delta.values())
+id_x_Delta_Delta_x_id_Delta = add_maps_mod_2(id_x_Delta_Delta, Delta_x_id_Delta)
+id_x_Delta_Delta_x_id_Delta = {k: list_mod(ls, modulus=2) for k, ls in expand_map_all(id_x_Delta_Delta_x_id_Delta).items()}
+print DELTA + "_c is co-associative?", not any(id_x_Delta_Delta_x_id_Delta.values())
 
-if any(id_x_Delta_Delta_id_Delta.values()):
-    print u"\n(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + " =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta_Delta_id_Delta.items() if v})
-
+if any(id_x_Delta_Delta_x_id_Delta.values()):
+    print u"\n(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + " =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta_Delta_x_id_Delta.items() if v})
+    #print "(raw) =", id_x_Delta_Delta_x_id_Delta
     # factored_id_x_Delta_Delta_id_Delta = {k: factorize(v) for k, v in id_x_Delta_Delta_id_Delta.items()}
     # print factored_id_x_Delta_Delta_id_Delta
 
@@ -150,39 +121,68 @@ if any(id_x_Delta_Delta_id_Delta.values()):
 COMPUTE HOMOLOGY
 """
 
-# create temporary file for CHomP
-scratch = open(temp_mat, 'w+')
+if not args.homology_groups:
 
-for n, entries in differential.iteritems():
-    print >> scratch, n - 1
-    incidences = [(l, r, v % 2) for (l, r), v in entries.iteritems()]
-    for entry in ["{} {} {}".format(l, r, v) for (l, r, v) in sorted(incidences, cmp=compare_incidences)]:
-        print >> scratch, entry
+    # create temporary file for CHomP
+    scratch = open(temp_mat, 'w+')
 
-scratch.close()
+    differential = {n: C.incidence_matrix(n, sparse=False) for n in range(1, C.topDimension() + 1)}
 
-try:
-    chomp_results = check_output(["chomp-matrix", temp_mat, "-g"])
-    #print chomp_results
-except CalledProcessError as e:
-    print e.returncode
-    print e.output
-    print e.output
-finally:
-    rm(temp_mat)  # clean up
+    for n, entries in differential.iteritems():
+        print >> scratch, n - 1
+        incidences = [(l, r, v % 2) for (l, r), v in entries.iteritems()]
+        for entry in ["{} {} {}".format(l, r, v) for (l, r, v) in sorted(incidences, cmp=compare_incidences)]:
+            print >> scratch, entry
 
-lines = chomp_results.splitlines()
+    scratch.close()
 
-dims = [int(k) for k in compile('\d+').findall(lines[0])]
+    try:
+        chomp_results = check_output(["chomp-matrix", temp_mat, "-g"])
+        #print chomp_results
+    except CalledProcessError as e:
+        print e.returncode
+        print e.output
+        print e.output
+    finally:
+        rm(temp_mat)  # clean up
+
+    lines = chomp_results.splitlines()
+
+    dims = [int(k) for k in compile('\d+').findall(lines[0])]
 
 
-H_gens = {}
-offset = 9 + len(dims)
-for n, k in enumerate(dims):
-    H_gens[n] = [[C.groups[n][int(j)] for j in compile('\[(\d+)\]').findall(lines[offset + i])] for i in range(k)]
-    offset += k + 1
+    H_gens = {}
+    offset = 9 + len(dims)
+    for n, k in enumerate(dims):
+        H_gens[n] = [[C.groups[n][int(j)] for j in compile('\[(\d+)\]').findall(lines[offset + i])] for i in range(k)]
+        offset += k + 1
 
-H = {dim: ["h{}_{}".format(dim, i) for i, gen in enumerate(gens)] for dim, gens in H_gens.items()}
+else:
+
+    try:
+        H_gens = eval(args.homology_groups.read())
+    except Exception as e:
+        print "Error: Unable to load homology groups!"
+        argparser.print_help()
+        raise SystemExit
+
+    args.homology_groups.close()
+
+    # verify that the provided homology generators are valid for this cell complex
+    for i, group in H_gens.iteritems():
+        for cells in group:
+            if not all([cell in C.groups[i] for cell in cells]):
+                print "Error: Invalid homology groups provided! Cells in generators not found in the complex."
+                raise SystemExit
+
+            d_cells = list_mod(derivative(cells, C))
+            if d_cells:
+                print "Error: Group generator in homology is not a cycle in the cell complex."
+                print "Dimension =", i, "; Generator =", cells
+                print "Derivative =", d_cells
+                raise SystemExit
+
+H = {dim: ["h{}_{}".format(dim, i) for i, gen in enumerate(gens)] for dim, gens in H_gens.iteritems()}
 print "\nH = H*(C) = ", H
 
 
@@ -191,7 +191,13 @@ DEFINE MAPS BETWEEN CHAINS AND HOMOLOGY
 """
 
 # Define g
-g = {"h{}_{}".format(dim, i): gen for dim, gens in H_gens.items() for i, gen in enumerate(gens) if gen}
+g = {}
+for dim, gens in H_gens.iteritems():
+    for i, gen in enumerate(gens):
+        if gen:
+            g["h{}_{}".format(dim, i)] = gen
+
+# g = {"h{}_{}".format(dim, i): gen for dim, gens in H_gens.iteritems() for i, gen in enumerate(gens) if gen}
 print
 print "g = ", format_morphism(g)
 
@@ -210,7 +216,7 @@ print DELTA + u"g =", format_morphism(delta_g)
 print
 print DELTA + u"g (unsimplified) =", {k: chain_coproduct(v, C.coproduct, simplify=False) for k, v in g.items()}
 
-factored_delta_g = {k: factorize(v) for k, v in delta_g.items()}
+factored_delta_g = {k: factorize(v, C) for k, v in delta_g.items()}
 print
 print DELTA + u"g (factored) =", factored_delta_g
 
@@ -274,18 +280,25 @@ print DELTA + "_2 is co-associative?", not any(z_1.values())
 COMPUTE DELTA_C_3
 """
 
-#(1 x Delta + Delta x 1) Delta g
-id_x_Delta_Delta_id_Delta_g = {k: list_mod([tp for c in v for tp in id_x_Delta_Delta_id_Delta[c]], 2) for k, v in g.items()}
-print
-print u"(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + "g =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta_Delta_id_Delta_g.items() if v})
-
-
-
-
 # Delta_c3
-Delta_c3 = {k: integrate(vs) for k, vs in id_x_Delta_Delta_id_Delta.items()}
+delta_c3 = integrate(id_x_Delta_Delta_x_id_Delta)
+delta_c3 = chain_map_mod(expand_map_all(delta_c3))
 print
-print DELTA + u"_C3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in Delta_c3.items() if v})
+print DELTA + u"_C3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in delta_c3.items() if v})
+
+# verify consistency
+nabla_delta_c3_computed = derivative(delta_c3, C)
+nabla_delta_c3_computed = chain_map_mod(expand_map_all(nabla_delta_c3_computed))
+
+print
+print NABLA + DELTA + u"_C3 =", format_morphism(nabla_delta_c3_computed)
+
+print u"\n(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + " + " + NABLA + DELTA + u"_C3 = 0 ? ",
+print not any(add_maps_mod_2(id_x_Delta_Delta_x_id_Delta, nabla_delta_c3_computed).values())
+
+if any(add_maps_mod_2(id_x_Delta_Delta_x_id_Delta, nabla_delta_c3_computed).values()):
+    print u"\n(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + " + " + NABLA + DELTA + u"_C3 =",
+    print format_morphism({k: [format_tuple(t) for t in v] for k, v in add_maps_mod_2(id_x_Delta_Delta_x_id_Delta, nabla_delta_c3_computed).items() if v})
 
 """
 COMPUTE DELTA3, g^3
@@ -317,13 +330,13 @@ print
 print PHI + u"_1 = (g " + OTIMES + " g^2 + g^2 " + OTIMES + " g) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in phi_1.items() if v})
 
 # factor phi_1
-factored_phi_1 = {k: factorize(v) for k, v in phi_1.items() if v}
+factored_phi_1 = {k: factorize_cycles(v, C) for k, v in phi_1.items() if v}
 print
 print PHI + u"_1 (factored) =", factored_phi_1
 
 delta3 = {k: [tuple(map(f, list(t))) for t in tuples] for k, tuples in factored_phi_1.items()}
 
-# flatten delta2 and remove up empty elements
+# flatten delta3 and remove up empty elements
 delta3 = {k: [tp_i for tp in tps for tp_i in expand_tuple_list(tp)]for k, tps in delta3.items()}
 print
 print DELTA + u"_3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in delta3.items()})
