@@ -18,6 +18,9 @@ def expand_tuple_list(tp):
             return [x + (y,) for x in acc for y in tp_comp]
         return [x + (tp_comp,) for x in acc]
 
+    if type(tp) is not tuple:
+        raise TypeError("parameter must be a tuple")
+
     return reduce(expand_tuple_helper, tp, [tuple()])
 
 
@@ -52,6 +55,18 @@ def unnest(ls):
         return ls
 
     return [ls]
+
+
+def tensor(*groups):
+
+    maxes = [max(g.keys()) for g in groups]
+    tensor_groups = {i: set() for i in range(sum(maxes) + 1)}
+
+    for combin in product(*[range(m+1) for m in maxes]):
+        tensor_groups[sum(combin)].update(
+            product(*[group[combin[i]] for i, group in enumerate(groups)]))
+
+    return tensor_groups
 
 
 def factorize(tps, C):
@@ -387,7 +402,7 @@ def ref_mod2(A, augment=0, eliminate=True):
         lower_nzs = [(j, len(A.rows[j])) for j in row_range[rank:] if A.rows[j] and A.rows[j][0] == i]
 
         # print some info on progress
-        print "\rcolumn: {}/{}; num_lower_nonzero: {}; reducible: {}".format(i, A.shape[1], len(lower_nzs), i - rank),
+        print "\rcolumn: {}/{}; num_lower_nonzero: {}; reducible: {}".format(i + 1, A.shape[1], len(lower_nzs), i - rank),
 
         if len(lower_nzs) > 0:
             # select the sparsest row to serve as representative
@@ -738,7 +753,7 @@ def generate_f_integral(C, g):
         # assuming map comes in factored
         expanded_map = chain_map_mod(expand_map_all(xs))
         best_distance = sum([len(vs) for vs in expanded_map.values()])
-
+        print "\rbest_distance =", best_distance,
         if best_distance == 0:
             return {}
 
@@ -983,25 +998,8 @@ def main():
     print "\noriginal =\n", test_mat[:, -1].toarray()
     print "\nsum of columns =\n", mat_mod2(colsum.toarray())
 
-    ########
-    #
-    # Select basis tests
-    #
-    ########
-
-    cols, rr_test_mat, rank = select_basis(test_mat)
-
-    print "\nSelect basis: rank =", rank
-    print "columns:", cols
-    print mat_mod2(rr_test_mat.dot(test_mat.getcol(-1))).toarray()
-    print
 
     #######################
-
-    print "Expand Tuple List tests"
-    print "([1], [1, 2]) = ", expand_tuple_list(([1], [1, 2]))
-    print "([1, 2], [1, 2, 3], [5, 6]) =", expand_tuple_list(([1, 2], [1, 2, 3], [5, 6]))
-    print
 
     # test data toy
     DGC = Coalgebra(
