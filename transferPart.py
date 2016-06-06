@@ -1,73 +1,31 @@
 # Standard imports
-from subprocess import check_output, CalledProcessError
-from os import remove as rm
-
-from re import sub, compile
 from argparse import ArgumentParser, FileType
-
-from itertools import product
-from collections import Counter
-
-import numpy
-
+from codecs import getwriter
+from os import remove as rm
+from re import compile
+from subprocess import check_output, CalledProcessError
 import sys
-import codecs
-sys.stdout=codecs.getwriter('utf-8')(sys.stdout)
+
 
 # Local imports
 import CellChainParse
-from Coalgebra import Coalgebra
-from factorize import factorize
 from support_functions import *
 from formatting import *
+from Coalgebra import Coalgebra
 
 __author__ = 'mfansler'
-temp_mat = "~transfer-temp.mat"
+TEMP_MAT = "~transfer-temp.mat"
 
+# Needed to output utf-8
+sys.stdout=getwriter('utf-8')(sys.stdout)
 
-def compare_incidences(x, y):
-    return x[1] - y[1] if x[1] != y[1] else x[0] - y[0]
-
-
-def tensor(*groups):
-
-    def mult(xs):
-        return reduce(lambda a, b: a*b, xs, 1) + 0
-
-    maxes = [max(g.keys()) for g in groups]
-    tensor_groups = {i: [] for i in range(sum(maxes) + 1)}
-
-    for combin in product(*[range(m+1) for m in maxes]):
-        tensor_groups[sum(combin)] += product(*[groups[i][combin[i]] for i in range(len(groups))])
-
-    return tensor_groups
-
-
-def chain_coproduct(chain, coproduct, simplify=True):
-
-    ps = [p for cell in chain for p, num in coproduct[cell].items() if num % 2]
-    return [el for el, num in Counter(ps).items() if num % 2] if simplify else ps
-
-
-def get_vector_in_basis(el, basis):
-
-    # el = [{}, {}]
-    # basis = [ {'h0_0': ['a','b','c',..,'z']}, {'h0_1': ['b', 'c', ...]}, ..., {}]
-    return [1 if k in el and v in el[k] else 0 for b in basis for k, v in b.items()]
-
-
-hom_dim_re = compile('h(\d*)_')
-
-
-def hom_dim(h_element):
-    return int(hom_dim_re.match(h_element).group(1))
-
-
+# Set up commandline argument parsing
 argparser = ArgumentParser(description="Computes induced coproduct on homology")
 argparser.add_argument('--hgroups', '-hg', dest='homology_groups', type=FileType('r'), help="File containing homology groups")
 argparser.add_argument('file', type=file, help="LaTeX file to be parsed")
 args = None
 
+# Read the arguments (if available)
 try:
     args = argparser.parse_args()
 except Exception as e:
@@ -115,9 +73,6 @@ print DELTA + "_c is co-associative?", not any(id_x_Delta_Delta_x_id_Delta.value
 if any(id_x_Delta_Delta_x_id_Delta.values()):
     print u"\n(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + " =",
     print format_morphism(id_x_Delta_Delta_x_id_Delta)
-    #print "(raw) =", id_x_Delta_Delta_x_id_Delta
-    # factored_id_x_Delta_Delta_id_Delta = {k: factorize(v) for k, v in id_x_Delta_Delta_id_Delta.items()}
-    # print factored_id_x_Delta_Delta_id_Delta
 
 """
 COMPUTE HOMOLOGY
@@ -126,9 +81,12 @@ COMPUTE HOMOLOGY
 if not args.homology_groups:
 
     # create temporary file for CHomP
-    scratch = open(temp_mat, 'w+')
+    scratch = open(TEMP_MAT, 'w+')
 
     differential = {n: C.incidence_matrix(n, sparse=False) for n in range(1, C.topDimension() + 1)}
+
+    def compare_incidences(x, y):
+        return x[1] - y[1] if x[1] != y[1] else x[0] - y[0]
 
     for n, entries in differential.iteritems():
         print >> scratch, n - 1
@@ -139,14 +97,14 @@ if not args.homology_groups:
     scratch.close()
 
     try:
-        chomp_results = check_output(["chomp-matrix", temp_mat, "-g"])
+        chomp_results = check_output(["chomp-matrix", TEMP_MAT, "-g"])
         #print chomp_results
     except CalledProcessError as e:
         print e.returncode
         print e.output
         print e.output
     finally:
-        rm(temp_mat)  # clean up
+        rm(TEMP_MAT)  # clean up
 
     lines = chomp_results.splitlines()
 
@@ -319,57 +277,91 @@ if any(add_maps_mod_2(id_x_Delta_Delta_x_id_Delta, nabla_delta_c3_computed).valu
 COMPUTE DELTA3, g^3
 """
 
-# (1 x Delta) g^2
-id_x_Delta_g2 = {k: [(l,) + r_cp for (l, r) in v for r_cp in C.coproduct[r].keys()] for k, v in g2.items()}
-print
-print u"(1 " + OTIMES + " " + DELTA + ") g^2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta_g2.items() if v})
+# (1 x Delta) g^2 and (Delta x 1) g^2
+id_x_Delta_g2 = {}
+Delta_x_id_g2 = {}
+for h, cxcs in g2.iteritems():
+    id_x_Delta_g2[h] = [(l,) + r_cp for (l, r) in cxcs for r_cp in delta_c[r]]
+    Delta_x_id_g2[h] = [l_cp + (r,) for (l, r) in cxcs for l_cp in delta_c[l]]
+id_x_Delta_g2 = chain_map_mod(id_x_Delta_g2)
+Delta_x_id_g2 = chain_map_mod(Delta_x_id_g2)
+print u"\n(1 " + OTIMES + " " + DELTA + ") g^2 =",  format_morphism(id_x_Delta_g2)
+print u"\n(" + DELTA + " " + OTIMES + " 1) g^2 =",  format_morphism(Delta_x_id_g2)
 
-# (Delta x 1) g^2
-Delta_x_id_g2 = {k: [l_cp + (r,) for (l, r) in v for l_cp in C.coproduct[l].keys()] for k, v in g2.items()}
-print
-print u"(" + DELTA + " " + OTIMES + " 1) g^2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in Delta_x_id_g2.items() if v})
+# (g x g^2) Delta_2 and (g^2 x g) Delta_2
+g_x_g2_Delta2 = {}
+g2_x_g_Delta2 = {}
+for h, hxhs in delta2.iteritems():
+    g_x_g2_Delta2[h] = [(l_cp,) + r_cp for l, r in hxhs for l_cp in g[l] for r_cp in g2[r]]
+    g2_x_g_Delta2[h] = [l_cp + (r_cp,) for l, r in hxhs for l_cp in g2[l] for r_cp in g[r]]
+g_x_g2_Delta2 = chain_map_mod(g_x_g2_Delta2)
+g2_x_g_Delta2 = chain_map_mod(g2_x_g_Delta2)
+print u"\n( g " + OTIMES + " g^2 ) " + DELTA + "_2 =",  format_morphism(g_x_g2_Delta2)
+print u"\n( g^2 " + OTIMES + " g ) " + DELTA + "_2 =",  format_morphism(g2_x_g_Delta2)
 
-# (g x g^2) Delta_2
-g_x_g2_Delta2 = {k: [(l_cp,) + t for l, r in v for t in g2[r] for l_cp in g[l]] for k, v in delta2.items()}
-print
-print u"( g " + OTIMES + " g^2 ) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g_x_g2_Delta2.items() if v})
-
-# (g^2 x g) Delta_2
-g2_x_g_Delta2 = {k: [t + (r_cp,) for l, r in v for t in g2[l] for r_cp in g[r]] for k, v in delta2.items()}
-print
-print u"( g^2 " + OTIMES + " g ) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g2_x_g_Delta2.items() if v})
+# delta_c3_g
+delta_c3_g = {}
+for h, chain in g.iteritems():
+    delta_c3_g[h] = []
+    for cell in chain:
+        if cell in delta_c3:
+            delta_c3_g[h] += delta_c3[cell]
+delta_c3_g = chain_map_mod(delta_c3_g)
+print u"\n" + DELTA + "_c3 g =",  format_morphism(delta_c3_g)
 
 # phi_1 = (1 x Delta + Delta x 1) g^2 + (g x g^2 + g^2 x g) Delta_2
-phi_1 = reduce(add_maps_mod_2, [g_x_g2_Delta2, g2_x_g_Delta2, id_x_Delta_g2, Delta_x_id_g2], {})
-print
-print PHI + u"_1 = (g " + OTIMES + " g^2 + g^2 " + OTIMES + " g) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in phi_1.items() if v})
+phi_1 = reduce(add_maps_mod_2, [g_x_g2_Delta2, g2_x_g_Delta2, id_x_Delta_g2, Delta_x_id_g2, delta_c3_g], {})
+print u"\n" + PHI + u"_1 = (g " + OTIMES + " g^2 + g^2 " + OTIMES + " g) " + DELTA + "_2 +",
+print u"(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) g^2 + " + DELTA + "_c3 g =",
+print format_morphism(phi_1)
+
+# Nabla phi_1 == 0 ? (Verify consistency)
+nabla_phi_1 = {}
+for h, chain in phi_1.iteritems():
+    nabla_phi_1[h] = derivative(chain, C)
+nabla_phi_1 = chain_map_mod(expand_map_all(nabla_phi_1))
+print "\n" + NABLA + PHI + u"_1 =", format_morphism(nabla_phi_1)
 
 # factor phi_1
-factored_phi_1 = {k: factorize_cycles(v, C) for k, v in phi_1.items() if v}
-print
-print PHI + u"_1 (factored) =", factored_phi_1
+factored_phi_1 = {h: factorize_cycles(chain, C) for h, chain in phi_1.iteritems() if chain}
+print "\n" + PHI + u"_1 (factored) =", format_morphism(factored_phi_1)
 
-delta3 = {k: [tuple(map(f, list(t))) for t in tuples] for k, tuples in factored_phi_1.items()}
+delta3 = {h: [f_tensor(cxcxc) for cxcxc in cycles] for h, cycles in factored_phi_1.iteritems()}
 
-# flatten delta3 and remove up empty elements
-delta3 = {k: [tp_i for tp in tps for tp_i in expand_tuple_list(tp)]for k, tps in delta3.items()}
-print
-print DELTA + u"_3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in delta3.items()})
+# flatten delta3 and remove any empty elements (mod 2)
+delta3 = chain_map_mod(expand_map_all(delta3))
+print "\n" + DELTA + u"_3 =", format_morphism(delta3)
 
 # (g x g x g) Delta3
-gxgxg_delta3 = {k: [(g_l, g_m, g_r) for l, m, r in v for g_l in g[l] for g_m in g[m] for g_r in g[r]] for k, v in delta3.items()}
-print
-print u"(g " + OTIMES + " g " + OTIMES + " g)" + DELTA + "_3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in gxgxg_delta3.items()})
+gxgxg_delta3 = {}
+for h, chain in delta3.iteritems():
+    gxgxg_delta3[h] = [g_tensor(hxhxh) for hxhxh in chain]
+gxgxg_delta3 = chain_map_mod(expand_map_all(gxgxg_delta3))
+print u"\n(g " + OTIMES + " g " + OTIMES + " g)" + DELTA + "_3 =", format_morphism(gxgxg_delta3)
 
 # nabla g^3
 nabla_g3 = add_maps_mod_2(gxgxg_delta3, phi_1)
-print
-print u"(g " + OTIMES + " g " + OTIMES + " g)" + DELTA + "_3 + " + PHI + "_1 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in nabla_g3.items() if v})
+print u"\n(g " + OTIMES + " g " + OTIMES + " g)" + DELTA + "_3 + " + PHI + "_1 =", format_morphism(nabla_g3)
 
 # g^3
-g3 = {k: integrate(vs) for k, vs in nabla_g3.items()}
-print
-print u"g^3 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in g3.items() if v})
+g3 = {h: group_integrate(chain, C) for h, chain in nabla_g3.iteritems()}
+g3 = chain_map_mod(expand_map_all(g3))
+print u"\ng^3 =", format_morphism(g3)
 
-print
-print NABLA + u" g^3 =", format_morphism({k: [(l, m, r) for (l, m, r) in derivative(v, C) if l and m and r] for k, v in g3.items() if v})
+"""
+VERIFY CONSISTENCY OF phi_1, Delta_3, and g^3
+"""
+
+nabla_g3_computed = {h: derivative(chain, C) for h, chain in g3.iteritems() if chain}
+nabla_g3_computed = chain_map_mod(expand_map_all(nabla_g3_computed))
+print "\n" + NABLA + u" g^3 =", format_morphism(nabla_g3_computed)
+
+print u"(g " + OTIMES + " g " + OTIMES + " g)" + DELTA + "_3 + " + PHI + "_1 + " + NABLA + "g^3 = 0 ? ",
+print not any(reduce(add_maps_mod_2, [gxgxg_delta3, nabla_g3_computed, phi_1], {}).values())
+
+if any(reduce(add_maps_mod_2, [gxgxg_delta3, nabla_g3_computed, phi_1], {}).values()):
+    print "\t", reduce(add_maps_mod_2, [gxgxg_delta3, nabla_g3_computed, phi_1], {})
+
+#####################
+# Facets of J_4
+#####################
