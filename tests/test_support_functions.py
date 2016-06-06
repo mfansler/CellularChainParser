@@ -1,9 +1,10 @@
 import numpy as np
+from random import randrange
 from scipy import sparse as sp
 from unittest import TestCase, main
 
 from support_functions import expand_tuple_list, ref_mod2, row_reduce_mod2, backsubstitute_mod2, \
-    mat_mod2, select_basis, tensor
+    mat_mod2, select_basis, tensor, add_maps_mod_2
 
 
 class TensorTestCase(TestCase):
@@ -280,6 +281,47 @@ class ExpandTupleListTestCase(TestCase):
         self.assertEqual(len(expand_tuple_list((range(40), range(5)))), 200)
         self.assertEqual(len(expand_tuple_list((range(10), range(11), range(12)))), 1320)
         self.assertEqual(len(expand_tuple_list((range(1), range(2), range(3), range(4), range(5)))), 120)
+
+
+class AddMapsTestCase(TestCase):
+    def test_identical_simple_map(self):
+        m1 = {0: [0, 1], 1: [0, 3], 2: [5]}
+
+        self.assertFalse(any(add_maps_mod_2(m1, m1).itervalues()))
+
+    def test_originals_intact(self):
+        m1 = {0: [0, 1], 1: [0, 3], 2: [5]}
+        m2 = {0: [0, 1], 1: [0, 3], 2: [5]}
+
+        m3 = add_maps_mod_2(m1, m2)
+
+        self.assertDictEqual(m1, {0: [0, 1], 1: [0, 3], 2: [5]})
+        self.assertDictEqual(m2, {0: [0, 1], 1: [0, 3], 2: [5]})
+
+    def test_multiple_in_first(self):
+        m1 = {0: [3, 3, 3], 1: [2, 2], 2: [4, 4, 4, 4]}
+        m2 = {0: [3], 1: [2], 2: [4]}
+
+        m3 = add_maps_mod_2(m1, m2)
+
+        self.assertDictEqual(m3, {0: [], 1: [2], 2: [4]})
+
+    def test_multiple_in_second(self):
+        m1 = {0: [3, 3, 3], 1: [2, 2], 2: [4, 4, 4, 4]}
+        m2 = {0: [3], 1: [2], 2: [4]}
+
+        m3 = add_maps_mod_2(m2, m1)
+
+        self.assertDictEqual(m3, {0: [], 1: [2], 2: [4]})
+
+    def test_commutative(self):
+        m1 = {0: [randrange(5) for i in range(20)]}
+        m2 = {0: [randrange(5) for i in range(20)]}
+
+        m3 = add_maps_mod_2(m1, m2)
+        m4 = add_maps_mod_2(m2, m1)
+
+        self.assertSetEqual(set(m3[0]), set(m4[0]))
 
 
 if __name__ == '__main__':

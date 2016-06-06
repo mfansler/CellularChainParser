@@ -233,10 +233,11 @@ def group_boundary_chains(chains, C):
 
     return groups
 
+
 def add_maps_mod_2(a, b):
 
-    res = deepcopy(a)
-    for k, vals in deepcopy(b).items():
+    res = chain_map_mod(a)
+    for k, vals in deepcopy(b).iteritems():
         if k not in res:
             res[k] = vals
         else:
