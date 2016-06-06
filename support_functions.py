@@ -330,7 +330,7 @@ def row_reduce_mod2(A, augment=0):
     row_range = range(A.shape[0])
 
     # multithreading worker pool for computing row sums
-    p = Pool(4)
+    p = Pool(8)
 
     for i in range(A.shape[1] - augment):
 
@@ -395,7 +395,7 @@ def ref_mod2(A, augment=0, eliminate=True):
     row_range = range(A.shape[0])
 
     # multithreading worker pool for computing row sums
-    p = Pool(4)
+    p = Pool(8)
 
     for i in range(A.shape[1] - augment):
 
