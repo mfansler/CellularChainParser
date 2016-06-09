@@ -464,6 +464,7 @@ def backsubstitute_mod2(ref_mat):
         x.append(col_idx)
 
         if col_idx == ref_mat.shape[1] - 1:
+            nzs.pop()
             continue
 
         for i in ref_mat.getcol(col_idx).nonzero()[0]:

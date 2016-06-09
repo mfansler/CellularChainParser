@@ -151,7 +151,7 @@ class LinearSystemSolvingTestCase(TestCase):
 
         sol = backsubstitute_mod2(test_mat_ref)
 
-        self.assertEqual(sol, [4])
+        self.assertEqual(sol, [4, 1])
 
     def test_independent_set_larger(self):
 
