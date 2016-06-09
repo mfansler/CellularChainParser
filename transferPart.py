@@ -344,7 +344,7 @@ def main():
     print u"\n(g " + OTIMES + " g " + OTIMES + " g)" + DELTA + "_3 + " + PHI + "_1 =", format_morphism(nabla_g3)
 
     # g^3
-    g3 = {h: group_integrate(chain, C) for h, chain in nabla_g3.iteritems()}
+    g3 = {h: chain_integrate(chain, C) for h, chain in nabla_g3.iteritems()}
     g3 = chain_map_mod(expand_map_all(g3))
     print u"\ng^3 =", format_morphism(g3)
 

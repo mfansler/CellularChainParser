@@ -14,7 +14,7 @@ __author__ = 'mfansler'
 
 def expand_tuple_list(tp):
     def expand_tuple_helper(acc, tp_comp):
-        if type(tp_comp) is list:
+        if type(tp_comp) is list or type(tp_comp) is set:
             return [x + (y,) for x in acc for y in tp_comp]
         return [x + (tp_comp,) for x in acc]
 
@@ -448,7 +448,7 @@ def ref_mod2(A, augment=0, eliminate=True):
 
 def backsubstitute_mod2(ref_mat):
     # assumes that last column is the y column
-    print "Back-substitution"
+    print "\nBack-substitution"
     # solution for (ref_mat[:,:-1]) * (x) = (ref_mat[:,-1])
     x = []
 
@@ -463,12 +463,17 @@ def backsubstitute_mod2(ref_mat):
         col_idx = ref_mat.getrow(row_idx).nonzero()[1][0]
         x.append(col_idx)
 
+        if col_idx == ref_mat.shape[1] - 1:
+            continue
+
         for i in ref_mat.getcol(col_idx).nonzero()[0]:
             if i in nzs:
                 nzs.remove(i)
             else:
                 nzs.append(i)
         nzs.sort()
+
+    print
 
     return x
 
@@ -758,6 +763,7 @@ def generate_f_integral(C, g):
         return None
 
     def integrate_chain_map(xs, allow_regress=True):
+
         # assuming map comes in factored
         expanded_map = chain_map_mod(expand_map_all(xs))
         best_distance = sum([len(vs) for vs in expanded_map.values()])
@@ -822,124 +828,59 @@ def matrix_reorder_rows_by_sparsity(A):
     return B, {b_idx: a_idx for b_idx, (a_idx, _, _) in enumerate(ordering)}
 
 
-def group_integrate(group, C):
+def chain_integrate(chain, C):
 
-    groups_inv = {cell: dim for dim, cells in C.groups.iteritems() for cell in cells}
-    if not group:
+    # expand the chain
+    exp_chain = [cell for raw_cell in chain for cell in expand_tuple_list(raw_cell)]
+    exp_chain = list_mod(exp_chain)
+
+    # if for some reason it is already zero
+    # there isn't really anything to integrate
+    if not exp_chain:
         return []
 
-    exp_group = [cell for chain in group for cell in expand_tuple_list(chain)]
-    dim = len(group[0])
+    # use the very first cell to determine the tuple length
+    dim = len(chain[0])
 
-    dim_indices = set([tuple([groups_inv[cell] for cell in chain]) for chain in exp_group])
-    anti_dim_indices = set([index[:i] + (index[i] + 1,) + index[i+1:] for index in dim_indices for i in range(dim)])
+    # create an inverse map that yields the dimension for each cell in C
+    cell_inv = {cell: dim for dim, cells in C.groups.iteritems() for cell in cells}
 
+    # check the different dimensions that appear in the chain
+    dim_indices = {tuple([cell_inv[tp_cmp] for tp_cmp in cell]) for cell in exp_chain}
+
+    # construct the possible anti-derivative dimensions that could yield
+    # the chain components
+    anti_dim_indices = {index[:i] + (index[i] + 1,) + index[i+1:] for index in dim_indices for i in range(dim)}
+
+    # get the total degree of the current cells by sampling the first
+    # TODO: Should we check if they are all identical??
     sum_dimension = sum(next(iter(dim_indices)))
 
-    tallies = [{} for _ in range(dim)]
-    for chain in group:
-        for i in range(dim):
-            cur = chain[i]
-            if type(cur) is list:
-                for el in cur:
-                    if groups_inv[el] in tallies[i]:
-                        tallies[i][groups_inv[el]].append(el)
-                    else:
-                        tallies[i][groups_inv[el]] = [el]
-            else:
-                if groups_inv[cur] in tallies[i]:
-                    tallies[i][groups_inv[cur]].append(cur)
-                else:
-                    tallies[i][groups_inv[cur]] = [cur]
+    dimensions_summary = [set(z) for z in zip(*dim_indices)]
 
-    tallies = [{i: set(vs) for i, vs in components.iteritems()} for components in tallies]
-    if any([len(tally) > 2 for tally in tallies]):
+    """
+    There could be a simple anti-derivative using only the
+    components that show up in the cells present.
+    This is significantly faster to check, so it is definitely
+    worth attempting.
+    """
+    if any([len(dims) == 2 for dims in dimensions_summary]) and \
+            not any([len(dims) > 2 for dims in dimensions_summary]):
 
-        anti_derivative_space = []
+        graded_set_tuple = [set(z) for z in zip(*exp_chain)]
+        for tp_pos, cells in enumerate(graded_set_tuple):
+            graded_set = {dim: set() for dim in dimensions_summary[tp_pos]}
+            for cell in cells:
+                graded_set[cell_inv[cell]].add(cell)
+            graded_set_tuple[tp_pos] = graded_set
+
+        anti_derivative_space = set()
         for index in anti_dim_indices:
-            anti_derivative_space += expand_tuple_list(tuple([C.groups[i] for i in index]))
-        anti_derivative_space = list_mod(anti_derivative_space)
-
-        num_cols = len(anti_derivative_space) + 1
-        num_rows = 0
-        entries = []
-        row_legend = {}
-
-        # iterate over possible components in anti-derivative space,
-        # creating a vector representation of their derivatives
-        for chain in anti_derivative_space:
-            entry = []
-            d_chain = [t for dx in derivative(chain, C) for t in expand_tuple_list(dx)]
-            d_chain = list_mod(d_chain)
-            for dx in d_chain:
-                frozen_dx = deep_freeze(dx)
-                if frozen_dx not in row_legend:
-                    row_legend[frozen_dx] = num_rows
-                    num_rows += 1
-                entry.append(row_legend[frozen_dx])
-            entries.append(sorted(list_mod(entry)))
-
-        # include a temp dummy row
-        entries.append(list(range(num_rows)))
-
-        #entries.append(sorted([row_legend[deep_freeze(chain)] for chain in list_mod(exp_group)]))
-
-        # create matrix
-        bd_mat = sp.lil_matrix((num_cols, num_rows), dtype=numpy.int8)
-        bd_mat.rows = entries
-        bd_mat.data = [[1]*len(row) for row in bd_mat.rows]
-
-        bd_mat, reordered_map = matrix_reorder_rows_by_sparsity(bd_mat)
-
-        # replace the dummy row
-        bd_mat.rows[-1] = sorted([row_legend[deep_freeze(chain)] for chain in list_mod(exp_group)])
-        bd_mat.data[-1] = [1]*len(bd_mat.rows[-1])
-
-        # transpose the matrix
-        bd_mat = bd_mat.transpose()
-
-        #cols, rr_op_mat, rank = select_basis(bd_mat)
-
-        #sol = mat_mod2(rr_op_mat.dot(bd_mat.getcol(-1))).nonzero()[0]
-
-        # row reduce
-        #rref_mat, rank = row_reduce_mod2(bd_mat, augment=1)
-        ref_mat, rank = ref_mod2(bd_mat, augment=1)
-        print "reduced to row echelon form with rank", rank
-
-        anti_derivative = backsubstitute_mod2(ref_mat)
-        anti_derivative = [anti_derivative_space[reordered_map[col]] for col in anti_derivative]
-        # solution = rref_mat.getcol(-1)
-        # for nz in solution.nonzero()[0]:
-        #     leftmost_col = rref_mat.getrow(nz).nonzero()[1][0]
-        #     if leftmost_col == num_cols - 1:
-        #         break
-        #     anti_derivative.append(anti_derivative_space[leftmost_col])
-
-        full_derivative = [dx_tp for dx in derivative(anti_derivative, C) for dx_tp in expand_tuple_list(dx) if all(dx)]
-        full_derivative = list_mod(full_derivative)
-        if not list_mod(full_derivative + exp_group):
-            return anti_derivative
-        else:
-            print "\ngroup: ", group
-            print "proposed antiderivative: ", factorize(factorize_cycles(anti_derivative, C), C)
-            print "calculated derivative:", factorize(factorize_cycles(full_derivative, C), C)
-
-        return None
-
-    if any([len(tally) > 1 for tally in tallies]):
-        # all possible anti-derivatives given the derivative chain
-        dim_indices = expand_tuple_list(tuple([tally.keys() for tally in tallies]))
-        dim_indices = [index for index in dim_indices if sum(index) == sum_dimension + 1]
-
-        anti_derivative_space = []
-        for index in dim_indices:
-            anti_derivative_space.append(tuple([list(tallies[i][index[i]]) for i in range(dim)]))
-
-        anti_derivative_space = [exp_tp for tp in anti_derivative_space for exp_tp in expand_tuple_list(tp)]
-        anti_derivative_space = list_mod(anti_derivative_space)
-        #anti_derivative_space = tuple([list(tally[max(tally.keys())]) for tally in tallies])
-        #anti_derivative_space = expand_tuple_list(anti_derivative_space)
+            if all([index_cmp in graded_set_tuple[i] for i, index_cmp in enumerate(index)]):
+                anti_derivs = tuple(
+                    [graded_set_tuple[i][index_cmp] for i, index_cmp in enumerate(index)])
+                anti_derivative_space.update(expand_tuple_list(anti_derivs))
+        anti_derivative_space = list(anti_derivative_space)
 
         num_cols = len(anti_derivative_space) + 1
         num_rows = 0
@@ -961,7 +902,7 @@ def group_integrate(group, C):
             entries.append(sorted(list_mod(entry)))
 
         # append the group to the entries
-        entries.append(sorted([row_legend[deep_freeze(chain)] for chain in list_mod(exp_group)]))
+        entries.append(sorted([row_legend[deep_freeze(chain)] for chain in exp_chain]))
 
         # create matrix
         bd_mat = sp.lil_matrix((num_cols, num_rows), dtype=numpy.int8)
@@ -970,19 +911,104 @@ def group_integrate(group, C):
         bd_mat = bd_mat.transpose()
 
         # row reduce
-        ref_mat, rank = ref_mod2(bd_mat, augment=1)
+        ref_mat, rank = ref_mod2(bd_mat, augment=1, eliminate=False)
 
         anti_derivative = backsubstitute_mod2(ref_mat)
+
+        if (num_cols - 1) in anti_derivative:
+            print "\nRow reduction did not find linearly dependent result!"
+            anti_derivative.remove(num_cols - 1)  # can still get partial solution
+
         anti_derivative = [anti_derivative_space[col] for col in anti_derivative]
 
         full_derivative = [dx_tp for dx in derivative(anti_derivative, C) for dx_tp in expand_tuple_list(dx) if all(dx)]
         full_derivative = list_mod(full_derivative)
-        if not list_mod(full_derivative + exp_group):
+        if not list_mod(full_derivative + exp_chain):
             return anti_derivative
         else:
-            print "\ngroup: ", group
-            print "proposed antiderivative: ", factorize(factorize_cycles(anti_derivative, C), C)
+            print "\nSimple anti-derivative not found for group: ", chain
+            print "closest anti-derivative: ", factorize(factorize_cycles(anti_derivative, C), C)
             print "calculated derivative:", factorize(factorize_cycles(full_derivative, C), C)
+
+    """
+    Compute the full anti-derivative space and express the group
+    using these components
+    """
+
+    # generate all possible anti-derivative cells
+    anti_derivative_space = set()
+    for index in anti_dim_indices:
+        anti_derivative_space.update(expand_tuple_list(tuple([C.groups[i] for i in index])))
+
+    # need to fix the order so that they can be recovered
+    anti_derivative_space = list(anti_derivative_space)
+
+    num_cols = len(anti_derivative_space) + 1
+    num_rows = 0
+    entries = []
+    row_legend = {}
+
+    # iterate over possible cells in anti-derivative space,
+    # creating a vector representation of their derivatives
+    for cell in anti_derivative_space:
+        entry = []
+        d_cell = [t for dx in derivative(cell, C) for t in expand_tuple_list(dx)]
+        d_cell = list_mod(d_cell)
+
+        # create an entry for each derivative cell
+        for dx in d_cell:
+            frozen_dx = deep_freeze(dx)
+
+            # update the row_legend if this cell is new
+            if frozen_dx not in row_legend:
+                row_legend[frozen_dx] = num_rows
+                num_rows += 1
+
+            # add the corresponding row number to the "column"
+            entry.append(row_legend[frozen_dx])
+
+        # once done mod, sort, then add to the rest of the entries
+        entries.append(sorted(entry))
+
+    # include a temp dummy row
+    entries.append(list(range(num_rows)))
+
+    # create matrix
+    bd_mat = sp.lil_matrix((num_cols, num_rows), dtype=numpy.int8)
+    bd_mat.rows = entries
+    bd_mat.data = [[1]*len(row) for row in bd_mat.rows]
+
+    # reordering by sparsity helps to get density accumulation down
+    bd_mat, reordered_map = matrix_reorder_rows_by_sparsity(bd_mat)
+
+    # replace the dummy row
+    bd_mat.rows[-1] = sorted([row_legend[deep_freeze(chain)] for chain in exp_chain])
+    bd_mat.data[-1] = [1]*len(bd_mat.rows[-1])
+
+    # transpose the matrix
+    bd_mat = bd_mat.transpose()
+
+    #row reduce
+    ref_mat, rank = ref_mod2(bd_mat, augment=1, eliminate=False)
+    print "reduced to row echelon form with rank", rank
+
+    anti_derivative = backsubstitute_mod2(ref_mat)
+
+    if (num_cols - 1) in anti_derivative:
+            print "\nRow reduction did not find linearly dependent result!"
+            anti_derivative.remove(num_cols - 1)  # can still get partial solution
+
+    anti_derivative = [anti_derivative_space[reordered_map[col]] for col in anti_derivative]
+
+    full_derivative = [dx_tp for dx in derivative(anti_derivative, C) for dx_tp in expand_tuple_list(dx) if all(dx)]
+    full_derivative = list_mod(full_derivative)
+
+    if not list_mod(full_derivative + exp_chain):
+        return anti_derivative
+    else:
+        print "\ngroup: ", chain
+        print "proposed antiderivative: ", factorize(factorize_cycles(anti_derivative, C), C)
+        print "calculated derivative:", factorize(factorize_cycles(full_derivative, C), C)
 
     return None
 
@@ -1040,7 +1066,7 @@ def main():
     BR_C = Coalgebra(
         {0: ['v_{1}', 'v_{2}', 'v_{3}', 'v_{4}', 'v_{5}', 'v_{6}', 'v_{7}', 'v_{8}', 'v_{9}', 'v_{10}', 'v_{11}'], 1: ['m_{1}', 'm_{2}', 'm_{3}', 'm_{4}', 'm_{5}', 'm_{6}', 'm_{7}', 'm_{8}', 'm_{9}', 'm_{10}', 'm_{11}', 'm_{12}', 'm_{13}', 'm_{14}', 'c_{1}', 'c_{2}', 'c_{3}', 'c_{4}', 'c_{5}', 'c_{6}', 'c_{7}', 'c_{8}', 'c_{9}', 'c_{10}', 'c_{11}', 'c_{12}', 'c_{13}', 'c_{14}', 'c_{15}', 'c_{16}', 'c_{17}', 'c_{18}'], 2: ['a_{1}', 'a_{2}', 'a_{3}', 'a_{4}', 'e_{1}', 'e_{2}', 's_{1}', 's_{2}', 's_{3}', 's_{4}', 's_{5}', 's_{6}', 's_{7}', 's_{8}', 's_{9}', 's_{10}', 's_{11}', 's_{12}', 't_{1}', 't_{2}', 't_{3}', 't_{4}', 't_{5}', 't_{6}', 't_{7}', 't_{8}'], 3: ['D', 'q_{1}', 'q_{2}', 'q_{3}', 'q_{4}']},
         {'m_{1}': {'v_{11}': 1, 'v_{1}': 1}, 'c_{5}': {'v_{7}': 1, 'v_{8}': 1}, 'm_{3}': {'v_{11}': 1, 'v_{8}': 1}, 'c_{13}': {'v_{11}': 1, 'v_{10}': 1}, 'c_{7}': {'v_{2}': 1, 'v_{3}': 1}, 'c_{3}': {'v_{2}': 1, 'v_{3}': 1}, 't_{6}': {'m_{7}': 1, 'c_{2}': 1, 'm_{6}': 1, 'c_{5}': 1, 'c_{6}': 1}, 't_{2}': {'c_{3}': 1, 'm_{5}': 1, 'c_{4}': 1, 'c_{1}': 1, 'm_{4}': 1}, 's_{4}': {'m_{9}': 1, 'c_{16}': 1, 'm_{12}': 1, 'c_{9}': 1}, 'c_{1}': {'v_{5}': 1, 'v_{1}': 1}, 'm_{9}': {'v_{7}': 1, 'v_{6}': 1}, 't_{4}': {'c_{7}': 1, 'c_{8}': 1, 'm_{5}': 1, 'c_{11}': 1, 'm_{4}': 1}, 's_{6}': {'c_{10}': 1, 'm_{7}': 1, 'c_{14}': 1, 'm_{3}': 1}, 'e_{2}': {'c_{18}': 1, 'c_{16}': 1, 'c_{14}': 1, 'c_{11}': 1, 'c_{12}': 1}, 'a_{3}': {'m_{1}': 1, 'c_{17}': 1}, 't_{7}': {'m_{9}': 1, 'c_{10}': 1, 'm_{8}': 1, 'c_{9}': 1, 'c_{12}': 1}, 'm_{12}': {'v_{5}': 1, 'v_{8}': 1}, 'c_{11}': {'v_{5}': 1, 'v_{1}': 1}, 'c_{15}': {'v_{5}': 1, 'v_{6}': 1}, 'a_{1}': {'c_{17}': 1, 'm_{14}': 1}, 'q_{3}': {'a_{3}': 1, 's_{1}': 1, 'e_{1}': 1, 's_{5}': 1, 't_{2}': 1, 's_{11}': 1, 't_{6}': 1}, 'c_{9}': {'v_{7}': 1, 'v_{8}': 1}, 't_{8}': {'c_{10}': 1, 'm_{7}': 1, 'm_{6}': 1, 'c_{9}': 1, 'c_{12}': 1}, 'c_{17}': {'v_{11}': 1, 'v_{1}': 1}, 's_{8}': {'c_{8}': 1, 'm_{13}': 1, 'm_{10}': 1, 'm_{12}': 1, 'c_{10}': 1}, 'c_{16}': {'v_{5}': 1, 'v_{6}': 1}, 'm_{10}': {'v_{4}': 1, 'v_{5}': 1}, 's_{11}': {'m_{2}': 1, 'c_{15}': 1, 'm_{5}': 1, 'c_{4}': 1}, 'm_{2}': {'v_{3}': 1, 'v_{6}': 1}, 'm_{14}': {'v_{11}': 1, 'v_{1}': 1}, 'm_{6}': {'v_{7}': 1, 'v_{6}': 1}, 'q_{2}': {'e_{2}': 1, 'a_{2}': 1, 's_{10}': 1, 's_{8}': 1, 's_{4}': 1, 't_{3}': 1, 't_{7}': 1}, 's_{3}': {'m_{9}': 1, 'c_{5}': 1, 'c_{15}': 1, 'm_{12}': 1}, 'q_{4}': {'e_{2}': 1, 's_{2}': 1, 't_{8}': 1, 'a_{4}': 1, 's_{6}': 1, 't_{4}': 1, 's_{12}': 1}, 'D': {'a_{3}': 1, 'a_{4}': 1, 'a_{1}': 1, 'a_{2}': 1}, 'c_{10}': {'v_{8}': 1, 'v_{9}': 1}, 't_{1}': {'m_{11}': 1, 'c_{3}': 1, 'm_{10}': 1, 'c_{4}': 1, 'c_{1}': 1}, 'c_{6}': {'v_{8}': 1, 'v_{9}': 1}, 't_{5}': {'m_{9}': 1, 'c_{5}': 1, 'm_{8}': 1, 'c_{2}': 1, 'c_{6}': 1}, 's_{5}': {'m_{7}': 1, 'c_{13}': 1, 'm_{3}': 1, 'c_{6}': 1}, 's_{2}': {'m_{1}': 1, 'm_{3}': 1, 'c_{7}': 1, 'c_{9}': 1, 'm_{6}': 1, 'm_{2}': 1, 'm_{4}': 1}, 't_{3}': {'m_{11}': 1, 'c_{8}': 1, 'm_{10}': 1, 'c_{7}': 1, 'c_{11}': 1}, 'm_{13}': {'v_{3}': 1, 'v_{9}': 1}, 'm_{8}': {'v_{10}': 1, 'v_{9}': 1}, 's_{7}': {'m_{13}': 1, 'm_{10}': 1, 'm_{12}': 1, 'c_{6}': 1, 'c_{4}': 1}, 'm_{11}': {'v_{2}': 1, 'v_{1}': 1}, 'c_{8}': {'v_{4}': 1, 'v_{3}': 1}, 'c_{4}': {'v_{4}': 1, 'v_{3}': 1}, 'a_{2}': {'c_{18}': 1, 'm_{14}': 1}, 's_{1}': {'m_{1}': 1, 'c_{5}': 1, 'm_{3}': 1, 'c_{3}': 1, 'm_{6}': 1, 'm_{2}': 1, 'm_{4}': 1}, 'e_{1}': {'c_{17}': 1, 'c_{15}': 1, 'c_{2}': 1, 'c_{13}': 1, 'c_{1}': 1}, 'q_{1}': {'s_{3}': 1, 'e_{1}': 1, 'a_{1}': 1, 't_{1}': 1, 't_{5}': 1, 's_{7}': 1, 's_{9}': 1}, 'c_{2}': {'v_{10}': 1, 'v_{6}': 1}, 'c_{12}': {'v_{10}': 1, 'v_{6}': 1}, 's_{10}': {'m_{11}': 1, 'c_{7}': 1, 'c_{14}': 1, 'm_{13}': 1, 'm_{8}': 1, 'm_{14}': 1}, 'm_{7}': {'v_{10}': 1, 'v_{9}': 1}, 'a_{4}': {'m_{1}': 1, 'c_{18}': 1}, 'c_{14}': {'v_{11}': 1, 'v_{10}': 1}, 'c_{18}': {'v_{11}': 1, 'v_{1}': 1}, 'm_{4}': {'v_{2}': 1, 'v_{1}': 1}, 'm_{5}': {'v_{4}': 1, 'v_{5}': 1}, 's_{9}': {'m_{11}': 1, 'c_{13}': 1, 'c_{3}': 1, 'm_{13}': 1, 'm_{8}': 1, 'm_{14}': 1}, 's_{12}': {'m_{2}': 1, 'c_{16}': 1, 'm_{5}': 1, 'c_{8}': 1}},
-        {} # don't really care about coproduct definition
+        {}  # don't really care about coproduct definition
     )
 
     BR_g = {'h0_0': ['v_{1}'], 'h2_1': ['t_{5}', 't_{6}', 't_{7}', 't_{8}'], 'h2_0': ['t_{1}', 't_{2}', 't_{3}', 't_{4}'], 'h1_0': ['m_{11}', 'm_{4}'], 'h1_1': ['c_{3}', 'c_{7}'], 'h1_2': ['m_{6}', 'm_{9}']}
@@ -1162,7 +1188,7 @@ def main():
     BR_nabla_g3_grouped_remainder = {k: [] for k in BR_nabla_g3_boundary_groups.keys()}
     for k, groups in BR_nabla_g3_boundary_groups.iteritems():
         for group in reversed(groups):
-            anti_group = group_integrate(group, BR_C)
+            anti_group = chain_integrate(group, BR_C)
             if anti_group is None:
                 BR_nabla_g3_grouped_remainder[k].append(group)
             else:

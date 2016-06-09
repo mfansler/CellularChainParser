@@ -367,7 +367,7 @@ print
 print u"(g " + OTIMES + " g " + OTIMES + " g)" + DELTA + "_3 + " + PHI + "_1 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in nabla_g3.items() if v})
 
 # g^3
-g3 = {k: group_integrate(vs, C) for k, vs in nabla_g3.items()}
+g3 = {k: chain_integrate(vs, C) for k, vs in nabla_g3.items()}
 #g3 = {k: [tp_i for tp in tps for tp_i in expand_tuple_list(tp)]for k, tps in g3.items() if tps}
 g3 = chain_map_mod(expand_map_all(g3))
 print
