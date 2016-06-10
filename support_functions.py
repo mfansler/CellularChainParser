@@ -927,7 +927,8 @@ def chain_integrate(chain, C):
 
         if (num_cols - 1) in anti_derivative:
             print "\nRow reduction did not find linearly dependent result!"
-            anti_derivative.remove(num_cols - 1)  # can still get partial solution
+            while (num_cols - 1) in anti_derivative:
+                anti_derivative.remove(num_cols - 1)  # can still get partial solution
 
         anti_derivative = [anti_derivative_space[col] for col in anti_derivative]
 
@@ -1006,7 +1007,8 @@ def chain_integrate(chain, C):
 
     if (num_cols - 1) in anti_derivative:
             print "\nRow reduction did not find linearly dependent result!"
-            anti_derivative.remove(num_cols - 1)  # can still get partial solution
+            while (num_cols - 1) in anti_derivative:
+                anti_derivative.remove(num_cols - 1)  # can still get partial solution
 
     anti_derivative = [anti_derivative_space[reordered_map[col]] for col in anti_derivative]
 
