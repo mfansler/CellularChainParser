@@ -119,6 +119,11 @@ def factorize_cycles(tps, C):
     if not tps:
         return tps
 
+    is_not_tuples = type(tps[0]) is not tuple
+    if is_not_tuples:
+        # wrap cells in 1-tuples so identical code can be used
+        tps = [(x,) for x in tps]
+
     results = tps
 
     # iterate through each tuple component
@@ -182,6 +187,10 @@ def factorize_cycles(tps, C):
 
             # if any remainders, add them to the results
             results += [tp[:idx] + ([tp[idx]],) + tp[idx + 1:] for (_, tp) in remaining]
+
+    if is_not_tuples:
+        # unwrap from tuple if they weren't tuples originally
+        results = [x[0] for x in results]
 
     return results
 
@@ -1020,7 +1029,7 @@ def main():
     DGC = Coalgebra(
         {0: ['v'], 1: ['a', 'b'], 2: ['aa', 'ab']},
         {'aa': {'b': 1}},
-        {} # don't really care about coproduct definition
+        {}  # don't really care about coproduct definition
 
     )
 
