@@ -171,10 +171,8 @@ h1_2_prebound = chain_integrate(phi_1['h1_2'], BR_C)
 h1_2_prebound = factorize_cycles(h1_2_prebound, BR_C)
 print "preboundary(phi['h1_2']) =", h1_2_prebound
 
-delta3 = {'h2_1': [('h1_0', 'h1_1', 'h1_2'),
-                   ('h1_2', 'h1_1', 'h1_0'),
-                   ('h1_2', 'h1_0', 'h1_1'),
-                   ('h1_1', 'h1_0', 'h1_2')],
+delta3 = {'h2_1': [('h1_0', 'h1_1', 'h1_2'), ('h1_1', 'h1_0', 'h1_2'),
+                   ('h1_2', 'h1_1', 'h1_0'), ('h1_2', 'h1_0', 'h1_1')],
           'h2_0': [('h1_0', 'h1_2', 'h1_1'), ('h1_2', 'h1_1', 'h1_0'),
                    ('h1_0', 'h1_1', 'h1_2'), ('h1_1', 'h1_2', 'h1_0')]}
 
@@ -217,7 +215,16 @@ g3 = {
         (['m_{6}', 'm_{9}'], ['m_{2}'], ['s_{1}', 's_{2}', 's_{9}', 's_{10}']),
         (['m_{6}', 'm_{9}'], ['c_{3}', 'c_{7}'], ['s_{2}', 's_{10}', 'a_{1}', 'a_{3}']),
         (['c_{3}', 'c_{7}'], ['s_{2}', 's_{10}', 'a_{1}', 'a_{3}'], ['m_{7}', 'm_{8}']),
-        (['c_{3}', 'c_{7}'], ['m_{4}', 'm_{11}'], ['t_{5}', 't_{6}'])
+        (['c_{3}', 'c_{7}'], ['m_{4}', 'm_{11}'], ['t_{5}', 't_{6}']),
+        (['m_{6}'], ['c_{5}', 'c_{9}'], ['m_{7}', 'm_{8}']),
+        (['m_{6}', 'm_{9}'], ['c_{6}', 'c_{10}'], ['s_{5}']),
+        (['m_{6}', 'm_{9}'], ['s_{2}', 's_{6}', 's_{10}', 'a_{1}', 'a_{3}'], ['c_{13}', 'c_{14}']),
+        (['s_{1}', 's_{5}', 's_{9}', 'a_{1}', 'a_{3}'], ['c_{13}', 'c_{14}'], ['m_{7}', 'm_{8}']),
+        (['t_{6}'], ['c_{5}', 'c_{9}'], ['m_{7}', 'm_{8}']),
+        (['t_{5}', 't_{6}'], ['c_{6}', 'c_{10}'], ['m_{7}', 'm_{8}']),
+        (['m_{7}', 'm_{8}'], ['s_{5}', 's_{6}'], ['m_{7}', 'm_{8}']),
+        (['m_{6}', 'm_{9}'], ['t_{5}', 't_{6}'], ['c_{3}', 'c_{7}']),
+        (['m_{6}', 'm_{9}'], ['m_{7}', 'm_{8}'], ['s_{9}', 's_{10}'])
     ],
     'h2_0': [
         (['t_{4}', 't_{2}', 't_{3}', 't_{1}'], ['m_{1}', 'm_{3}', 'm_{12}'], ['m_{1}']),
@@ -271,14 +278,5 @@ should_be_zero_cyc = {h: factorize_cycles(chain, BR_C) for h, chain in should_be
 print "\nNabla(g^3) + (g x g x g) Delta_3 + phi_1  (factored)=", format_morphism(should_be_zero_cyc)
 
 should_be_zero_fd = {h: [(t, tuple(map(f_BR, list(t)))) for t in cycles] for h, cycles in should_be_zero_cyc.iteritems()}
-print "f'd up: ", should_be_zero_fd
-exit()
+print "(f x f x f)(remainder) =", format_morphism(should_be_zero_fd)
 
-# nabla g^3
-nabla_g3 = add_maps_mod_2(gxgxg_delta3, phi_1)
-nabla_g3_factored = {h: factorize_cycles(chain, BR_C) for h, chain in nabla_g3.iteritems()}
-print u"\n(g " + OTIMES + " g " + OTIMES + " g)" + DELTA + "_3 + " + PHI + "_1 =", format_morphism(nabla_g3_factored)
-print u"\n(g " + OTIMES + " g " + OTIMES + " g)" + DELTA + "_3 + " + PHI + "_1 =", format_morphism(nabla_g3)
-
-
-print chain_integrate(nabla_g3_factored['h2_1'], BR_C)
