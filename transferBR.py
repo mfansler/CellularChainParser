@@ -440,6 +440,11 @@ def main():
     g3 = chain_map_mod(expand_map_all(g3))
     print u"\ng^3 =", format_morphism(g3)
 
+    # however, we still need all keys to be available
+    for h in g.iterkeys():
+        if h not in g3:
+            g3[h] = []
+
     """
     VERIFY CONSISTENCY OF phi_1, Delta_3, and g^3
     """
@@ -458,94 +463,73 @@ def main():
     # Facets of J_4
     #####################
 
-    # (1 x 1 x Delta) g^3
-    id_x_id_x_Delta_g3 = {k: [(l, m) + r_cp for (l, m, r) in v for r_cp in C.coproduct[r].keys()] for k, v in g3.items()}
-    print
-    print u"(1 " + OTIMES + " 1 " + OTIMES + " " + DELTA + ") g^3 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_id_x_Delta_g3.items() if v})
+    # (1 x 1 x Delta) g^3 ## (1 x Delta x 1) g^3 ## (Delta x 1 x 1) g^3 #
+    id_x_id_x_Delta_g3 = {}
+    id_x_Delta_x_id_g3 = {}
+    Delta_x_id_x_id_g3 = {}
+    for h, cxcxcs in g3.iteritems():
+        id_x_id_x_Delta_g3[h] = [(l, m) + r_cp for (l, m, r) in cxcxcs for r_cp in delta_c[r]]
+        id_x_Delta_x_id_g3[h] = [(l, ) + m_cp + (r, ) for (l, m, r) in cxcxcs for m_cp in delta_c[m]]
+        Delta_x_id_x_id_g3[h] = [l_cp + (m, r) for (l, m, r) in cxcxcs for l_cp in delta_c[l]]
+    id_x_id_x_Delta_g3 = chain_map_mod(id_x_id_x_Delta_g3)
+    id_x_Delta_x_id_g3 = chain_map_mod(id_x_Delta_x_id_g3)
+    Delta_x_id_x_id_g3 = chain_map_mod(Delta_x_id_x_id_g3)
 
-    # (1 x Delta x 1) g^3
-    id_x_Delta_x_id_g3 = {k: [(l, ) + m_cp + (r, ) for (l, m, r) in v for m_cp in C.coproduct[m].keys()] for k, v in g3.items()}
-    print
-    print u"(1 " + OTIMES + " " + DELTA + " " + OTIMES + " 1) g^3 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in id_x_Delta_x_id_g3.items() if v})
+    print u"\n(1 " + OTIMES + " 1 " + OTIMES + " " + DELTA + ") g^3 =",  format_morphism(id_x_id_x_Delta_g3)
+    print u"\n(1 " + OTIMES + " " + DELTA + " " + OTIMES + " 1) g^3 =",  format_morphism(id_x_Delta_x_id_g3)
+    print u"\n(" + DELTA + " " + OTIMES + " 1 " + OTIMES + " 1) g^3 =",  format_morphism(Delta_x_id_x_id_g3)
 
-    # (Delta x 1 x 1) g^3
-    Delta_x_id_x_id_g3 = {k: [l_cp + (m, r) for (l, m, r) in v for l_cp in C.coproduct[l].keys()] for k, v in g3.items()}
-    print
-    print u"(" + DELTA + " " + OTIMES + " 1 " + OTIMES + " 1) g^3 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in Delta_x_id_x_id_g3.items() if v})
+    # (g x g^3) Delta_2 ## (g^2 x g^2) Delta_2  ## (g^3 x g) Delta_2 #
+    g_x_g3_Delta2 = {}
+    g2_x_g2_Delta2 = {}
+    g3_x_g_Delta2 = {}
 
-    # (g x g^3) Delta_2
-    g_x_g3_Delta2 = {k: [(g[l],) + t for l, r in v for t in g3[r]] for k, v in delta2.items()}
-    print
-    print u"( g " + OTIMES + " g^3 ) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g_x_g3_Delta2.items() if v})
+    for h, hxhs in delta2.iteritems():
+        g_x_g3_Delta2[h] = [(l_cp, ) + r_cp for l, r in hxhs for l_cp in g[l] for r_cp in g3[r]]
+        g2_x_g2_Delta2[h] = [l_cp + r_cp for l, r in hxhs for l_cp in g2[l] for r_cp in g2[r]]
+        g3_x_g_Delta2[h] = [l_cp + (r_cp, ) for l, r in hxhs for l_cp in g3[l] for r_cp in g[r]]
 
-    # (g^2 x g^2) Delta_2
-    g2_x_g2_Delta2 = {k: [s + t for l, r in v for s in g2[l] for t in g2[r]] for k, v in delta2.items()}
-    print
-    print u"( g^2 " + OTIMES + " g^2 ) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g2_x_g2_Delta2.items() if v})
+    g_x_g3_Delta2 = chain_map_mod(g_x_g3_Delta2)
+    g2_x_g2_Delta2 = chain_map_mod(g2_x_g2_Delta2)
+    g3_x_g_Delta2 = chain_map_mod(g3_x_g_Delta2)
 
-    # (g^3 x g) Delta_2
-    g3_x_g_Delta2 = {k: [t + (g[r],) for l, r in v for t in g3[l]] for k, v in delta2.items()}
-    print
-    print u"( g^3 " + OTIMES + " g ) " + DELTA + "_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g3_x_g_Delta2.items() if v})
+    print u"\n( g " + OTIMES + " g^3 ) " + DELTA + "_2 =",  format_morphism(g_x_g3_Delta2)
+    print u"\n( g^2 " + OTIMES + " g^2 ) " + DELTA + "_2 =",  format_morphism(g2_x_g2_Delta2)
+    print u"\n( g^3 " + OTIMES + " g ) " + DELTA + "_2 =",  format_morphism(g3_x_g_Delta2)
 
-    # (g x g x g^2) Delta_3
-    g_x_g_x_g2_Delta3 = {k: [(g[l], g[m]) + t for l, m, r in v for t in g2[r]] for k, v in delta3.items()}
-    print
-    print u"( g " + OTIMES + " g " + OTIMES + " g^2 ) " + DELTA + "_3 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g_x_g_x_g2_Delta3.items() if v})
+    # (g x g x g^2) Delta_3 ## (g x g^2 x g) Delta_3 ## (g^2 x g x g) Delta_3 #
+    g_x_g_x_g2_Delta3 = {}
+    g_x_g2_x_g_Delta3 = {}
+    g2_x_g_x_g_Delta3 = {}
 
-    # (g x g^2 x g) Delta_3
-    g_x_g2_x_g_Delta3 = {k: [(g[l], ) + t + (g[r], ) for l, m, r in v for t in g2[m]] for k, v in delta3.items()}
-    print
-    print u"( g " + OTIMES + " g^2 " + OTIMES + " g ) " + DELTA + "_3 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g_x_g2_x_g_Delta3.items() if v})
+    for h, hxhxhs in delta3.iteritems():
+        g_x_g_x_g2_Delta3[h] = [(g[l], g[m]) + r_cp for (l, m, r) in hxhxhs for r_cp in g2[r]]
+        g_x_g2_x_g_Delta3[h] = [(g[l], ) + m_cp + (g[r], ) for (l, m, r) in hxhxhs for m_cp in g2[m]]
+        g2_x_g_x_g_Delta3[h] = [l_cp + (g[m], g[r]) for (l, m, r) in hxhxhs for l_cp in g2[l]]
 
-    # (g^2 x g x g) Delta_3
-    g2_x_g_x_g_Delta3 = {k: [t + (g[m], g[r]) for l, m, r in v for t in g2[l]] for k, v in delta3.items()}
-    print
-    print u"( g^2 " + OTIMES + " g " + OTIMES + " g ) " + DELTA + "_3 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in g2_x_g_x_g_Delta3.items() if v})
+    g_x_g_x_g2_Delta3 = chain_map_mod(expand_map_all(g_x_g_x_g2_Delta3))
+    g_x_g2_x_g_Delta3 = chain_map_mod(expand_map_all(g_x_g2_x_g_Delta3))
+    g2_x_g_x_g_Delta3 = chain_map_mod(expand_map_all(g2_x_g_x_g_Delta3))
+
+    print u"\n( g " + OTIMES + " g " + OTIMES + " g^2 ) " + DELTA + "_3 =",  format_morphism(g_x_g_x_g2_Delta3)
+    print u"\n( g " + OTIMES + " g^2 " + OTIMES + " g ) " + DELTA + "_3 =",  format_morphism(g_x_g2_x_g_Delta3)
+    print u"\n( g^2 " + OTIMES + " g " + OTIMES + " g ) " + DELTA + "_3 =",  format_morphism(g2_x_g_x_g_Delta3)
 
     # phi_2
     phi_2 = reduce(add_maps_mod_2, [id_x_id_x_Delta_g3, id_x_Delta_x_id_g3, Delta_x_id_x_id_g3, g_x_g3_Delta2,
                                     g3_x_g_Delta2, g2_x_g2_Delta2, g_x_g_x_g2_Delta3, g_x_g2_x_g_Delta3, g2_x_g_x_g_Delta3], {})
-    print
-    print PHI + u"_2 =",  format_morphism({k: [format_tuple(t) for t in v] for k, v in phi_2.items() if v})
 
+    print "\n" + PHI + u"_2 =",  format_morphism(phi_2)
 
-    CxCxCxC = tensor(C.groups, C.groups, C.groups, C.groups)
-    # print CxCxCxC # debug
+    # factor phi_2
+    factored_phi_2 = {h: factorize_cycles(chain, C) for h, chain in phi_2.iteritems() if chain}
+    print "\n" + PHI + u"_2 (factored) =", format_morphism(factored_phi_2)
 
-    dCxCxCxC = {}
-    for k, vs in CxCxCxC.items():
-        dCxCxCxC[k] = {}
-        for (v1, v2, v3, v4) in vs:
-            dv1 = [(v1_i, v2, v3, v4) for v1_i in C.differential[v1]] if v1 in C.differential else []
-            dv2 = [(v1, v2_i, v3, v4) for v2_i in C.differential[v2]] if v2 in C.differential else []
-            dv3 = [(v1, v2, v3_i, v4) for v3_i in C.differential[v3]] if v3 in C.differential else []
-            dv4 = [(v1, v2, v3, v4_i) for v4_i in C.differential[v4]] if v4 in C.differential else []
-            if dv1 + dv2 + dv3 + dv4:
-                dCxCxCxC[k][(v1, v2, v3, v4)] = dv1 + dv2 + dv3 + dv4
+    delta4 = {h: [f_tensor(cxcxcxc) for cxcxcxc in cycles] for h, cycles in factored_phi_2.iteritems()}
 
-    delta4 = {}
-    g4 = {} # all boundary found in image will become part of g4
-    for k, v in g.items():
-        dim = int(k[1])+3
-
-        img = phi_2[k]
-        g4[k] = []
-        for chain, bd in dCxCxCxC[dim].items():
-            if all([cell in img for cell in bd]):
-                g4[k].append(chain)
-                for cell in bd:
-                    img.remove(cell)
-        delta4[k] = img
-
-    delta4 = {k: [(g_inv[v1], g_inv[v2], g_inv[v3], g_inv[v4]) for (v1, v2, v3, v4) in v] for k, v in delta4.items() if v}
-
-    print
-    print DELTA + u"_4 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in delta4.items()})
-
-    # g^4
-    print
-    print u"g^4 =", format_morphism({k: [format_tuple(t) for t in v] for k, v in g4.items() if v})
+    # flatten delta3 and remove any empty elements (mod 2)
+    delta4 = chain_map_mod(expand_map_all(delta4))
+    print "\n" + DELTA + u"_4 =", format_morphism(delta4)
 
 
 if __name__ == '__main__':
