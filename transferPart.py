@@ -73,6 +73,8 @@ def main():
     if any(id_x_Delta_Delta_x_id_Delta.values()):
         print u"\n(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + " =",
         print format_morphism(id_x_Delta_Delta_x_id_Delta)
+        print u"\n(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + " (factored) =",
+        print format_morphism({cell: factorize(factorize_cycles(chain, C), C) for cell, chain in id_x_Delta_Delta_x_id_Delta.iteritems()})
 
     """
     COMPUTE HOMOLOGY

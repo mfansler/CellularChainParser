@@ -259,6 +259,11 @@ def main():
     print
     print DELTA + u"_C3 =", format_morphism(delta_c3)
 
+    # however, we still need all keys to be available
+    for cell in delta_c.iterkeys():
+        if cell not in delta_c3:
+            delta_c3[cell] = []
+
     # verify consistency
     nabla_delta_c3_computed = derivative(delta_c3, C)
     nabla_delta_c3_computed = chain_map_mod(expand_map_all(nabla_delta_c3_computed))
@@ -459,9 +464,106 @@ def main():
     if any(reduce(add_maps_mod_2, [gxgxg_delta3, nabla_g3_computed, phi_1], {}).values()):
         print "\t", reduce(add_maps_mod_2, [gxgxg_delta3, nabla_g3_computed, phi_1], {})
 
+    """
+    COMPUTE \Delta_C4
+    """
+
+    print "\n\nComputing", DELTA + u"_C4...\n\n"
+
+    # (Delta_c3 x 1 + 1 x Delta_c3) Delta_c2
+    delta_c3_x_id_delta_c = {}
+    id_x_delta_c3_delta_c = {}
+
+    for cell, cxcs in delta_c.iteritems():
+        delta_c3_x_id_delta_c[cell] = [l_cp + (r, ) for (l, r) in cxcs for l_cp in delta_c3[l]]
+        id_x_delta_c3_delta_c[cell] = [(l, ) + r_cp for (l, r) in cxcs for r_cp in delta_c3[r]]
+
+    delta_c3_x_id_delta_c = chain_map_mod(expand_map_all(delta_c3_x_id_delta_c))
+    id_x_delta_c3_delta_c = chain_map_mod(expand_map_all(id_x_delta_c3_delta_c))
+
+    print u"\n( " + DELTA + "_c3 " + OTIMES + " 1 ) " + DELTA + "_c2 =",  format_morphism(delta_c3_x_id_delta_c)
+    print u"\n( 1 " + OTIMES, DELTA + "_c3 ) " + DELTA + "_c2 =",  format_morphism(id_x_delta_c3_delta_c)
+
+    # (1 x 1 x Delta_c2) Delta_c3 ## (1 x 1 x Delta_c2) Delta_c3 ## (1 x 1 x Delta_c2) Delta_c3 #
+    id_x_id_x_delta_c2_delta_c3 = {}
+    id_x_delta_c2_x_id_delta_c3 = {}
+    delta_c2_x_id_x_id_delta_c3 = {}
+
+    for cell, cxcxcs in delta_c3.iteritems():
+        id_x_id_x_delta_c2_delta_c3[cell] = [(l, m) + r_cp for (l, m, r) in cxcxcs for r_cp in delta_c[r]]
+        id_x_delta_c2_x_id_delta_c3[cell] = [(l, ) + m_cp + (r, ) for (l, m, r) in cxcxcs for m_cp in delta_c[m]]
+        delta_c2_x_id_x_id_delta_c3[cell] = [l_cp + (m, r) for (l, m, r) in cxcxcs for l_cp in delta_c[l]]
+
+    id_x_id_x_delta_c2_delta_c3 = chain_map_mod(expand_map_all(id_x_id_x_delta_c2_delta_c3))
+    id_x_delta_c2_x_id_delta_c3 = chain_map_mod(expand_map_all(id_x_delta_c2_x_id_delta_c3))
+    delta_c2_x_id_x_id_delta_c3 = chain_map_mod(expand_map_all(delta_c2_x_id_x_id_delta_c3))
+
+    print u"\n( 1 " + OTIMES + " 1 " + OTIMES, DELTA + "_c2 ) " + DELTA + "_c3 =",  format_morphism(id_x_id_x_delta_c2_delta_c3)
+    print u"\n( 1 " + OTIMES, DELTA + "_c2 " + OTIMES + " 1 ) " + DELTA + "_c3 =",  format_morphism(id_x_delta_c2_x_id_delta_c3)
+    print u"\n( " + DELTA + "_c2 " + OTIMES + " 1 " + OTIMES + " 1 ) " + DELTA + "_c3 =",  format_morphism(delta_c2_x_id_x_id_delta_c3)
+
+    nabla_delta_c4 = reduce(add_maps_mod_2, [
+        delta_c3_x_id_delta_c, id_x_delta_c3_delta_c,
+        id_x_id_x_delta_c2_delta_c3, id_x_delta_c2_x_id_delta_c3, delta_c2_x_id_x_id_delta_c3], {})
+
+    # DeltaC = (1 x Delta_C + Delta_C x 1) Delta_C
+    print DELTA + "_c3 is co-associative?", not any(nabla_delta_c4.values())
+
+    if any(nabla_delta_c4.values()):
+        print "\n" + NABLA + "(" + DELTA + " _C4) =",
+        print format_morphism(nabla_delta_c4)
+        print "\n" + NABLA + "(" + DELTA + " _C4) (factored) =",
+        print format_morphism({cell: factorize(factorize_cycles(chain, C), C) for cell, chain in nabla_delta_c4.iteritems()})
+
+    # Delta_c4
+    delta_c4 = integrate(nabla_delta_c4)
+    delta_c4 = chain_map_mod(expand_map_all(delta_c4))
+    print
+    print DELTA + u"_C4 =", format_morphism(delta_c4)
+
+    # verify consistency
+    nabla_delta_c4_computed = derivative(delta_c4, C)
+    nabla_delta_c4_computed = chain_map_mod(expand_map_all(nabla_delta_c4_computed))
+
+    print
+    print NABLA + DELTA + u"_C4 =", format_morphism(nabla_delta_c4_computed)
+
+    print u"\n(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + " + " + NABLA + DELTA + u"_C3 = 0 ? ",
+    print not any(add_maps_mod_2(nabla_delta_c4, nabla_delta_c4_computed).values())
+
+    if any(add_maps_mod_2(nabla_delta_c4, nabla_delta_c4_computed).values()):
+        print u"\n(1 " + OTIMES + " " + DELTA + " + " + DELTA + " " + OTIMES + " 1) " + DELTA + " + " + NABLA + DELTA + u"_C3 =",
+        print format_morphism(add_maps_mod_2(nabla_delta_c4, nabla_delta_c4_computed))
+
+    """
+    COMPUTE \Phi_2, \Delta4, g^4
+    """
+
     #####################
     # Facets of J_4
     #####################
+
+    # (Delta_C4) g #
+    delta_c4_g = {}
+    for h, chain in g.iteritems():
+        delta_c4_g[h] = []
+        for cell in chain:
+            if cell in delta_c4:
+                delta_c4_g[h] += delta_c4[cell]
+    delta_c4_g = chain_map_mod(delta_c4_g)
+    print u"\n" + DELTA + "_c4 g =",  format_morphism(delta_c4_g)
+
+    # (1 x Delta_C3) g^2 ## (Delta_C3 x 1) g^2 #
+    id_x_Delta_c3_g2 = {}
+    Delta_c3_x_id_g2 = {}
+    for h, cxcs in g2.iteritems():
+        id_x_Delta_c3_g2[h] = [(l, ) + r_cp for (l, r) in cxcs for r_cp in delta_c3[r]]
+        Delta_c3_x_id_g2[h] = [l_cp + (r, ) for (l, r) in cxcs for l_cp in delta_c3[l]]
+    id_x_Delta_c3_g2 = chain_map_mod(id_x_Delta_c3_g2)
+    Delta_c3_x_id_g2 = chain_map_mod(Delta_c3_x_id_g2)
+
+    print u"\n(1 " + OTIMES + " " + DELTA + "_C3) g^2 =",  format_morphism(id_x_Delta_c3_g2)
+    print u"\n( " + DELTA + "_C3 " + OTIMES + " 1) g^2 =",  format_morphism(Delta_c3_x_id_g2)
 
     # (1 x 1 x Delta) g^3 ## (1 x Delta x 1) g^3 ## (Delta x 1 x 1) g^3 #
     id_x_id_x_Delta_g3 = {}
@@ -515,9 +617,12 @@ def main():
     print u"\n( g " + OTIMES + " g^2 " + OTIMES + " g ) " + DELTA + "_3 =",  format_morphism(g_x_g2_x_g_Delta3)
     print u"\n( g^2 " + OTIMES + " g " + OTIMES + " g ) " + DELTA + "_3 =",  format_morphism(g2_x_g_x_g_Delta3)
 
+
     # phi_2
-    phi_2 = reduce(add_maps_mod_2, [id_x_id_x_Delta_g3, id_x_Delta_x_id_g3, Delta_x_id_x_id_g3, g_x_g3_Delta2,
-                                    g3_x_g_Delta2, g2_x_g2_Delta2, g_x_g_x_g2_Delta3, g_x_g2_x_g_Delta3, g2_x_g_x_g_Delta3], {})
+    phi_2 = reduce(add_maps_mod_2, [delta_c4_g, id_x_Delta_c3_g2, Delta_c3_x_id_g2,
+                                    id_x_id_x_Delta_g3, id_x_Delta_x_id_g3, Delta_x_id_x_id_g3,
+                                    g_x_g3_Delta2, g3_x_g_Delta2, g2_x_g2_Delta2,
+                                    g_x_g_x_g2_Delta3, g_x_g2_x_g_Delta3, g2_x_g_x_g_Delta3], {})
 
     print "\n" + PHI + u"_2 =",  format_morphism(phi_2)
 
@@ -531,6 +636,21 @@ def main():
     delta4 = chain_map_mod(expand_map_all(delta4))
     print "\n" + DELTA + u"_4 =", format_morphism(delta4)
 
+    # (g x g x g x g) Delta4
+    gxgxgxg_delta4 = {}
+    for h, chain in delta4.iteritems():
+        gxgxgxg_delta4[h] = [g_tensor(hxhxhxh) for hxhxhxh in chain]
+    gxgxgxg_delta4 = chain_map_mod(expand_map_all(gxgxgxg_delta4))
+    print u"\n(g " + OTIMES + " g " + OTIMES + " g " + OTIMES + " g)" + DELTA + "_4 =", format_morphism(gxgxgxg_delta4)
+
+    # nabla g^4
+    nabla_g4 = add_maps_mod_2(gxgxgxg_delta4, phi_2)
+    print u"\n(g " + OTIMES + " g " + OTIMES + " g " + OTIMES + " g)" + DELTA + "_4 + " + PHI + "_2 =", format_morphism(nabla_g4)
+
+    # g^4
+    g4 = {h: chain_integrate(chain, C) for h, chain in nabla_g4.iteritems()}
+    g4 = chain_map_mod(expand_map_all(g4))
+    print u"\ng^4 =", format_morphism(g4)
 
 if __name__ == '__main__':
     main()
