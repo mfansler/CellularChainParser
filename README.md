@@ -35,3 +35,24 @@ The homology computed by CHomP in SageMath is not guaranteed to provide minimal 
     cc_gens = extract_generators(cc_hom)
     cc_min_gens = minimal_generators(cc_gens, steps=10, pruning=True)
     cc_min_gens
+
+## transferPart.py
+This script parses a chain complex definition, computes homology, and applies the transfer algorithm to induce coproducts in homology from the defined coproducts.  It will attempt to compute up to the 4-ary coproduct in homology, as long as the 3-ary coproduct does not vanish.
+
+### Simple Link Example
+
+    python transferPart.py data/linked.tex
+
+### User-Defined Homology
+Since homology definition can influence the symbolic simplification (e.g., you may get something more readable), an option to provide user-specified homology groups (and the representative for each class) is available.  The `-hg` flag can be used to designate a homology group definition.
+
+Here is an example using a differential graded coalgebra:
+
+    python transferPart.py -hg data/hom_dgc.py data/dgc.tex
+
+## Research Applications
+A central motivation for this work was to explore the application of the transfer algorithm to Brunnian link complements.  Specialized scripts that compute transfer for Borromean rings are included.
+
+    python transferBR.py -hg data/hom_borromean.py data/borromean.tex
+
+More details on this can found in the thesis document, available in the **Releases** section of the repository.
